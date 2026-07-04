@@ -1,0 +1,16 @@
+{
+  "name": "mentor-platform",
+  "private": true,
+  "version": "1.0.0",
+  "workspaces": [
+    "Frontend",
+    "Backend"
+  ],
+  "scripts": {
+    "dev:frontend": "npm run dev --workspace mentor-platform-frontend",
+    "build:frontend": "npm run build --workspace mentor-platform-frontend",
+    "preview:frontend": "npm run preview --workspace mentor-platform-frontend",
+    "dev:backend": "npm run dev --workspace mentor-platform-backend",
+    "start:backend": "npm start --workspace mentor-platform-backend"
+  }
+}
