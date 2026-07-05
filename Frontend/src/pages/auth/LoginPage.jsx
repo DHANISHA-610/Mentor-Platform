@@ -41,17 +41,25 @@ export default function LoginPage() {
     if (!validate()) return;
 
     setLoading(true);
-    await new Promise((r) => setTimeout(r, 800));
-
-    login({
-      id: Date.now(),
-      name: form.email.split('@')[0].replace(/[._]/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase()),
-      email: form.email,
-      role: null,
-    });
-
-    setLoading(false);
-    navigate('/role-selection');
+    try {
+      const res = await fetch('http://localhost:5000/api/auth/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: form.email, password: form.password }),
+      });
+      const data = await res.json();
+      
+      if (data.success) {
+        login(data.user, data.token);
+        // The useEffect will automatically navigate based on user.role
+      } else {
+        setErrors({ ...errors, password: data.message || 'Login failed' });
+      }
+    } catch (error) {
+      setErrors({ ...errors, password: 'Server connection error. Is the backend running?' });
+    } finally {
+      setLoading(false);
+    }
   };
 
   const fillDemo = (role) => {

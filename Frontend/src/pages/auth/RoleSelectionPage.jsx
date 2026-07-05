@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { FiUsers, FiAward, FiShield, FiCheck, FiArrowRight } from 'react-icons/fi';
 import AuthLayout from '../../layouts/AuthLayout';
 import { useAuth } from '../../hooks/useAuth';
@@ -36,27 +36,52 @@ const roles = [
 ];
 
 export default function RoleSelectionPage() {
-  const { user, updateUser } = useAuth();
+  const { login } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
   const [selected, setSelected] = useState(null);
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+
+  // Extract registration data passed from the previous step
+  const regData = location.state || {};
 
   const handleContinue = async () => {
     if (!selected) return;
 
+    if (!regData.email) {
+      setError('Missing registration data. Please go back and try again.');
+      return;
+    }
+
     setLoading(true);
-    await new Promise((r) => setTimeout(r, 600));
-
-    updateUser({ role: selected });
-
-    const routes = {
-      intern: '/intern-dashboard',
-      mentor: '/mentor-dashboard',
-      admin: '/admin-dashboard',
-    };
-
-    setLoading(false);
-    navigate(routes[selected]);
+    setError('');
+    
+    try {
+      const res = await fetch('http://localhost:5000/api/auth/register', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ...regData, role: selected }),
+      });
+      const data = await res.json();
+      
+      if (data.success) {
+        login(data.user, data.token);
+        
+        const routes = {
+          intern: '/intern-dashboard',
+          mentor: '/mentor-dashboard',
+          admin: '/admin-dashboard',
+        };
+        navigate(routes[selected]);
+      } else {
+        setError(data.message || 'Registration failed');
+      }
+    } catch (err) {
+      setError('Server connection error. Is the backend running?');
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -68,8 +93,9 @@ export default function RoleSelectionPage() {
           </span>
           <h2 className="mt-3 text-3xl font-bold tracking-tight text-slate-900">Choose your role</h2>
           <p className="mt-2 text-sm text-slate-500">
-            Welcome{user?.name ? `, ${user.name.split(' ')[0]}` : ''}! How will you use MentorHub?
+            Welcome{regData?.name ? `, ${regData.name.split(' ')[0]}` : ''}! How will you use MentorHub?
           </p>
+          {error && <p className="mt-4 text-sm font-medium text-red-500 bg-red-50 p-3 rounded-lg border border-red-100">{error}</p>}
         </div>
 
         <div className="space-y-3">

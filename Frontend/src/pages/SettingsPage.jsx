@@ -1,11 +1,13 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { FiUser, FiLock, FiBell, FiCheck } from 'react-icons/fi';
 import DashboardLayout from '../layouts/DashboardLayout';
 import PageHeader from '../components/ui/PageHeader';
 import { useAuth } from '../hooks/useAuth';
 
+const API_URL = 'http://localhost:5000/api/profile';
+
 export default function SettingsPage() {
-  const { user, updateUser } = useAuth();
+  const { user, token, updateUser } = useAuth();
   const [profile, setProfile] = useState({ name: user?.name || '' });
   const [passwords, setPasswords] = useState({ current: '', newPassword: '', confirm: '' });
   const [notifications, setNotifications] = useState({
@@ -17,21 +19,57 @@ export default function SettingsPage() {
   });
   const [toast, setToast] = useState(null);
   const [passwordError, setPasswordError] = useState('');
+  const [profileError, setProfileError] = useState('');
+  const [savingProfile, setSavingProfile] = useState(false);
+  const [savingPassword, setSavingPassword] = useState(false);
+
+  useEffect(() => {
+    setProfile({ name: user?.name || '' });
+  }, [user]);
 
   const showToast = (message, type = 'success') => {
     setToast({ message, type });
     setTimeout(() => setToast(null), 3000);
   };
 
-  const handleProfileSave = (e) => {
+  const handleProfileSave = async (e) => {
     e.preventDefault();
-    updateUser({ name: profile.name });
-    showToast('Profile updated successfully');
+    setProfileError('');
+
+    if (!profile.name.trim()) {
+      setProfileError('Name is required');
+      return;
+    }
+
+    setSavingProfile(true);
+    try {
+      const res = await fetch(API_URL, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ name: profile.name.trim() }),
+      });
+      const data = await res.json();
+
+      if (res.ok && data.success) {
+        updateUser({ name: data.user.name });
+        showToast('Profile updated successfully');
+      } else {
+        setProfileError(data.message || 'Failed to update profile');
+      }
+    } catch (error) {
+      setProfileError('Server connection error. Is the backend running?');
+    } finally {
+      setSavingProfile(false);
+    }
   };
 
-  const handlePasswordSave = (e) => {
+  const handlePasswordSave = async (e) => {
     e.preventDefault();
     setPasswordError('');
+
     if (passwords.newPassword !== passwords.confirm) {
       setPasswordError('New passwords do not match');
       return;
@@ -40,8 +78,33 @@ export default function SettingsPage() {
       setPasswordError('Password must be at least 6 characters');
       return;
     }
-    setPasswords({ current: '', newPassword: '', confirm: '' });
-    showToast('Password updated successfully');
+
+    setSavingPassword(true);
+    try {
+      const res = await fetch(`${API_URL}/password`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          currentPassword: passwords.current,
+          newPassword: passwords.newPassword,
+        }),
+      });
+      const data = await res.json();
+
+      if (res.ok && data.success) {
+        setPasswords({ current: '', newPassword: '', confirm: '' });
+        showToast('Password updated successfully');
+      } else {
+        setPasswordError(data.message || 'Unable to update password');
+      }
+    } catch (error) {
+      setPasswordError('Server connection error. Is the backend running?');
+    } finally {
+      setSavingPassword(false);
+    }
   };
 
   return (
@@ -88,10 +151,15 @@ export default function SettingsPage() {
               />
               <p className="mt-1 text-xs text-slate-400">Email cannot be changed</p>
             </div>
-            <button type="submit" className="rounded-lg bg-brand-600 px-4 py-2 text-sm font-medium text-white hover:bg-brand-700">
-              Save Profile
+            <button
+              type="submit"
+              disabled={savingProfile}
+              className="rounded-lg bg-brand-600 px-4 py-2 text-sm font-medium text-white transition hover:bg-brand-700 disabled:opacity-60"
+            >
+              {savingProfile ? 'Saving...' : 'Save Profile'}
             </button>
           </form>
+          {profileError && <p className="mt-2 text-xs text-red-500">{profileError}</p>}
         </section>
 
         <section className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
@@ -133,8 +201,12 @@ export default function SettingsPage() {
               />
             </div>
             {passwordError && <p className="text-xs text-red-500">{passwordError}</p>}
-            <button type="submit" className="rounded-lg bg-brand-600 px-4 py-2 text-sm font-medium text-white hover:bg-brand-700">
-              Update Password
+            <button
+              type="submit"
+              disabled={savingPassword}
+              className="rounded-lg bg-brand-600 px-4 py-2 text-sm font-medium text-white transition hover:bg-brand-700 disabled:opacity-60"
+            >
+              {savingPassword ? 'Updating...' : 'Update Password'}
             </button>
           </form>
         </section>

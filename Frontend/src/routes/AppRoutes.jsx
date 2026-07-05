@@ -58,14 +58,7 @@ export default function AppRoutes() {
       <Route path="/" element={<RoleRedirect />} />
       <Route path="/login" element={<LoginPage />} />
       <Route path="/register" element={<RegisterPage />} />
-      <Route
-        path="/role-selection"
-        element={
-          <ProtectedRoute>
-            <RoleSelectionPage />
-          </ProtectedRoute>
-        }
-      />
+      <Route path="/role-selection" element={<RoleSelectionPage />} />
 
       <Route
         path="/settings"

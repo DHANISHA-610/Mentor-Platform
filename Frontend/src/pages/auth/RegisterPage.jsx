@@ -48,18 +48,14 @@ export default function RegisterPage() {
     e.preventDefault();
     if (!validate()) return;
 
-    setLoading(true);
-    await new Promise((r) => setTimeout(r, 1000));
-
-    login({
-      id: Date.now(),
-      name: form.name.trim(),
-      email: form.email,
-      role: null,
+    // Proceed to Role Selection page and pass the registration data
+    navigate('/role-selection', { 
+      state: { 
+        name: form.name.trim(), 
+        email: form.email, 
+        password: form.password 
+      } 
     });
-
-    setLoading(false);
-    navigate('/role-selection');
   };
 
   const inputClass = (hasError) =>
