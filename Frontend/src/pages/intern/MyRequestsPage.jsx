@@ -1,11 +1,15 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { FiSend, FiPlus } from 'react-icons/fi';
 import DashboardLayout from '../../layouts/DashboardLayout';
 import PageHeader from '../../components/ui/PageHeader';
 import RequestCard from '../../components/intern/RequestCard';
 import EmptyState from '../../components/ui/EmptyState';
-import { internRequests } from '../../utils/mockData';
+import LoadingSpinner from '../../components/ui/LoadingSpinner';
+import ErrorState from '../../components/ui/ErrorState';
+import { useAuth } from '../../hooks/useAuth';
+
+const API_URL = 'http://localhost:5000/api/requests';
 
 const tabs = [
   { key: 'all', label: 'All' },
@@ -16,17 +20,42 @@ const tabs = [
 
 export default function MyRequestsPage() {
   const navigate = useNavigate();
+  const { token } = useAuth();
+  const [requests, setRequests] = useState([]);
   const [activeTab, setActiveTab] = useState('all');
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+
+  useEffect(() => {
+    const fetchRequests = async () => {
+      try {
+        setLoading(true);
+        setError('');
+        const res = await fetch(API_URL, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        const data = await res.json();
+        if (!res.ok || !data.success) throw new Error(data.message || 'Failed to load requests');
+        setRequests(data.requests || []);
+      } catch (err) {
+        setError(err.message || 'Unable to load requests');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    if (token) fetchRequests();
+  }, [token]);
 
   const filtered = activeTab === 'all'
-    ? internRequests
-    : internRequests.filter((r) => r.status === activeTab);
+    ? requests
+    : requests.filter((r) => r.status === activeTab);
 
   const counts = {
-    all: internRequests.length,
-    pending: internRequests.filter((r) => r.status === 'pending').length,
-    approved: internRequests.filter((r) => r.status === 'approved').length,
-    rejected: internRequests.filter((r) => r.status === 'rejected').length,
+    all: requests.length,
+    pending: requests.filter((r) => r.status === 'pending').length,
+    approved: requests.filter((r) => r.status === 'approved').length,
+    rejected: requests.filter((r) => r.status === 'rejected').length,
   };
 
   return (
@@ -66,7 +95,13 @@ export default function MyRequestsPage() {
         ))}
       </div>
 
-      {filtered.length === 0 ? (
+      {loading ? (
+        <div className="rounded-xl border border-slate-200 bg-white p-8">
+          <LoadingSpinner size="lg" />
+        </div>
+      ) : error ? (
+        <ErrorState title="Unable to load requests" message={error} onRetry={() => window.location.reload()} />
+      ) : filtered.length === 0 ? (
         <EmptyState
           icon={FiSend}
           title="No requests found"
@@ -77,7 +112,7 @@ export default function MyRequestsPage() {
       ) : (
         <div className="space-y-4">
           {filtered.map((request) => (
-            <RequestCard key={request.id} request={request} />
+            <RequestCard key={request._id} request={request} />
           ))}
         </div>
       )}

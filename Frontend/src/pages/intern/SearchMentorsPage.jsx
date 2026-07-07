@@ -6,10 +6,13 @@ import MentorCard from '../../components/intern/MentorCard';
 import EmptyState from '../../components/ui/EmptyState';
 import LoadingSpinner from '../../components/ui/LoadingSpinner';
 import ErrorState from '../../components/ui/ErrorState';
+import { useAuth } from '../../hooks/useAuth';
 
 const API_URL = 'http://localhost:5000/api/mentors';
+const REQUESTS_API_URL = 'http://localhost:5000/api/requests';
 
 export default function SearchMentorsPage() {
+  const { token } = useAuth();
   const [mentors, setMentors] = useState([]);
   const [allSkills, setAllSkills] = useState([]);
   const [search, setSearch] = useState('');
@@ -75,10 +78,25 @@ export default function SearchMentorsPage() {
     );
   };
 
-  const handleRequest = (mentor) => {
-    setRequestedIds((prev) => new Set([...prev, mentor._id]));
-    setToast(`Request sent to ${mentor.name}!`);
-    setTimeout(() => setToast(null), 3000);
+  const handleRequest = async (mentor) => {
+    try {
+      const res = await fetch(REQUESTS_API_URL, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ mentorId: mentor._id, message: `I'd like to learn more about ${mentor.title || 'mentorship'}.` }),
+      });
+      const data = await res.json();
+      if (!res.ok || !data.success) throw new Error(data.message || 'Failed to send request');
+      setRequestedIds((prev) => new Set([...prev, mentor._id]));
+      setToast(`Request sent to ${mentor.name}!`);
+      setTimeout(() => setToast(null), 3000);
+    } catch (err) {
+      setToast(err.message || 'Unable to send request');
+      setTimeout(() => setToast(null), 3000);
+    }
   };
 
   return (

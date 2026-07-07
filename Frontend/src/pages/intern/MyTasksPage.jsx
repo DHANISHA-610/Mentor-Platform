@@ -1,11 +1,15 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { FiCheckSquare } from 'react-icons/fi';
 import DashboardLayout from '../../layouts/DashboardLayout';
 import PageHeader from '../../components/ui/PageHeader';
 import StatCard from '../../components/ui/StatCard';
 import TaskCard from '../../components/intern/TaskCard';
 import EmptyState from '../../components/ui/EmptyState';
-import { internTasks } from '../../utils/mockData';
+import LoadingSpinner from '../../components/ui/LoadingSpinner';
+import ErrorState from '../../components/ui/ErrorState';
+import { useAuth } from '../../hooks/useAuth';
+
+const API_URL = 'http://localhost:5000/api/tasks';
 
 const tabs = [
   { key: 'all', label: 'All' },
@@ -16,17 +20,40 @@ const tabs = [
 ];
 
 export default function MyTasksPage() {
+  const { token } = useAuth();
+  const [tasks, setTasks] = useState([]);
   const [activeTab, setActiveTab] = useState('all');
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+
+  useEffect(() => {
+    const fetchTasks = async () => {
+      try {
+        setLoading(true);
+        setError('');
+        const res = await fetch(API_URL, { headers: { Authorization: `Bearer ${token}` } });
+        const data = await res.json();
+        if (!res.ok || !data.success) throw new Error(data.message || 'Failed to load tasks');
+        setTasks(data.tasks || []);
+      } catch (err) {
+        setError(err.message || 'Unable to load tasks');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    if (token) fetchTasks();
+  }, [token]);
 
   const filtered = activeTab === 'all'
-    ? internTasks
-    : internTasks.filter((t) => t.status === activeTab);
+    ? tasks
+    : tasks.filter((t) => t.status === activeTab);
 
   const stats = {
-    total: internTasks.length,
-    inProgress: internTasks.filter((t) => t.status === 'in_progress').length,
-    completed: internTasks.filter((t) => t.status === 'completed').length,
-    overdue: internTasks.filter((t) => t.status === 'overdue').length,
+    total: tasks.length,
+    inProgress: tasks.filter((t) => t.status === 'in_progress').length,
+    completed: tasks.filter((t) => t.status === 'completed').length,
+    overdue: tasks.filter((t) => t.status === 'overdue').length,
   };
 
   return (
@@ -56,7 +83,13 @@ export default function MyTasksPage() {
         ))}
       </div>
 
-      {filtered.length === 0 ? (
+      {loading ? (
+        <div className="rounded-xl border border-slate-200 bg-white p-8">
+          <LoadingSpinner size="lg" />
+        </div>
+      ) : error ? (
+        <ErrorState title="Unable to load tasks" message={error} onRetry={() => window.location.reload()} />
+      ) : filtered.length === 0 ? (
         <EmptyState
           icon={FiCheckSquare}
           title="No tasks found"
@@ -65,7 +98,7 @@ export default function MyTasksPage() {
       ) : (
         <div className="space-y-4">
           {filtered.map((task) => (
-            <TaskCard key={task.id} task={task} />
+            <TaskCard key={task._id} task={task} />
           ))}
         </div>
       )}

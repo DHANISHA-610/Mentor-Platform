@@ -1,11 +1,15 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { FiInbox, FiCheck } from 'react-icons/fi';
 import DashboardLayout from '../../layouts/DashboardLayout';
 import PageHeader from '../../components/ui/PageHeader';
 import StatCard from '../../components/ui/StatCard';
 import IncomingRequestCard from '../../components/mentor/IncomingRequestCard';
 import EmptyState from '../../components/ui/EmptyState';
-import { mentorIncomingRequests as initialRequests } from '../../utils/mockData';
+import LoadingSpinner from '../../components/ui/LoadingSpinner';
+import ErrorState from '../../components/ui/ErrorState';
+import { useAuth } from '../../hooks/useAuth';
+
+const API_URL = 'http://localhost:5000/api/requests';
 
 const tabs = [
   { key: 'all', label: 'All' },
@@ -15,9 +19,31 @@ const tabs = [
 ];
 
 export default function IncomingRequestsPage() {
-  const [requests, setRequests] = useState(initialRequests);
+  const { token } = useAuth();
+  const [requests, setRequests] = useState([]);
   const [activeTab, setActiveTab] = useState('all');
   const [toast, setToast] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+
+  useEffect(() => {
+    const fetchRequests = async () => {
+      try {
+        setLoading(true);
+        setError('');
+        const res = await fetch(API_URL, { headers: { Authorization: `Bearer ${token}` } });
+        const data = await res.json();
+        if (!res.ok || !data.success) throw new Error(data.message || 'Failed to load requests');
+        setRequests(data.requests || []);
+      } catch (err) {
+        setError(err.message || 'Unable to load requests');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    if (token) fetchRequests();
+  }, [token]);
 
   const filtered = activeTab === 'all'
     ? requests
@@ -35,22 +61,42 @@ export default function IncomingRequestsPage() {
     setTimeout(() => setToast(null), 3000);
   };
 
-  const handleAccept = (id) => {
-    setRequests((prev) =>
-      prev.map((r) =>
-        r.id === id ? { ...r, status: 'accepted', responseDate: new Date().toISOString().split('T')[0] } : r
-      )
-    );
-    showToast('Request accepted successfully');
+  const handleAccept = async (id) => {
+    try {
+      const res = await fetch(`${API_URL}/${id}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ status: 'approved' }),
+      });
+      const data = await res.json();
+      if (!res.ok || !data.success) throw new Error(data.message || 'Failed to update request');
+      setRequests((prev) => prev.map((r) => (r._id === id ? { ...r, status: 'approved', responseDate: data.request.responseDate } : r)));
+      showToast('Request accepted successfully');
+    } catch (err) {
+      showToast(err.message || 'Unable to update request');
+    }
   };
 
-  const handleDecline = (id) => {
-    setRequests((prev) =>
-      prev.map((r) =>
-        r.id === id ? { ...r, status: 'declined', responseDate: new Date().toISOString().split('T')[0] } : r
-      )
-    );
-    showToast('Request declined');
+  const handleDecline = async (id) => {
+    try {
+      const res = await fetch(`${API_URL}/${id}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ status: 'rejected' }),
+      });
+      const data = await res.json();
+      if (!res.ok || !data.success) throw new Error(data.message || 'Failed to update request');
+      setRequests((prev) => prev.map((r) => (r._id === id ? { ...r, status: 'rejected', responseDate: data.request.responseDate } : r)));
+      showToast('Request declined');
+    } catch (err) {
+      showToast(err.message || 'Unable to update request');
+    }
   };
 
   return (
@@ -92,7 +138,13 @@ export default function IncomingRequestsPage() {
         ))}
       </div>
 
-      {filtered.length === 0 ? (
+      {loading ? (
+        <div className="rounded-xl border border-slate-200 bg-white p-8">
+          <LoadingSpinner size="lg" />
+        </div>
+      ) : error ? (
+        <ErrorState title="Unable to load requests" message={error} onRetry={() => window.location.reload()} />
+      ) : filtered.length === 0 ? (
         <EmptyState
           icon={FiInbox}
           title="No requests found"
@@ -102,7 +154,7 @@ export default function IncomingRequestsPage() {
         <div className="space-y-4">
           {filtered.map((request) => (
             <IncomingRequestCard
-              key={request.id}
+              key={request._id}
               request={request}
               onAccept={handleAccept}
               onDecline={handleDecline}

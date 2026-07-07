@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { FiPlus, FiCheck, FiClipboard } from 'react-icons/fi';
 import DashboardLayout from '../../layouts/DashboardLayout';
 import PageHeader from '../../components/ui/PageHeader';
@@ -6,7 +6,11 @@ import StatCard from '../../components/ui/StatCard';
 import MentorTaskCard from '../../components/mentor/MentorTaskCard';
 import CreateTaskModal from '../../components/mentor/CreateTaskModal';
 import EmptyState from '../../components/ui/EmptyState';
-import { mentorTasks as initialTasks, assignedInterns } from '../../utils/mockData';
+import LoadingSpinner from '../../components/ui/LoadingSpinner';
+import ErrorState from '../../components/ui/ErrorState';
+import { useAuth } from '../../hooks/useAuth';
+
+const API_URL = 'http://localhost:5000/api/tasks';
 
 const tabs = [
   { key: 'all', label: 'All' },
@@ -17,10 +21,39 @@ const tabs = [
 ];
 
 export default function TaskManagementPage() {
-  const [tasks, setTasks] = useState(initialTasks);
+  const { token, user } = useAuth();
+  const [tasks, setTasks] = useState([]);
   const [activeTab, setActiveTab] = useState('all');
   const [modalOpen, setModalOpen] = useState(false);
   const [toast, setToast] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+  const [interns, setInterns] = useState([]);
+
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        setLoading(true);
+        setError('');
+        const [tasksRes, internsRes] = await Promise.all([
+          fetch(API_URL, { headers: { Authorization: `Bearer ${token}` } }),
+          fetch('http://localhost:5000/api/mentors'),
+        ]);
+        const tasksData = await tasksRes.json();
+        const internsData = await internsRes.json();
+        if (!tasksRes.ok || !tasksData.success) throw new Error(tasksData.message || 'Failed to load tasks');
+        if (!internsRes.ok || !internsData.success) throw new Error(internsData.message || 'Failed to load interns');
+        setTasks(tasksData.tasks || []);
+        setInterns((internsData.mentors || []).map((mentor) => ({ id: mentor._id, name: mentor.name })));
+      } catch (err) {
+        setError(err.message || 'Unable to load tasks');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    if (token) fetchData();
+  }, [token]);
 
   const filtered = activeTab === 'all'
     ? tasks
@@ -39,17 +72,27 @@ export default function TaskManagementPage() {
     setTimeout(() => setToast(null), 3000);
   };
 
-  const handleCreate = (taskData) => {
-    const newTask = {
-      id: Date.now(),
-      ...taskData,
-    };
-    setTasks((prev) => [newTask, ...prev]);
-    showToast('Task created successfully');
+  const handleCreate = async (taskData) => {
+    try {
+      const res = await fetch(API_URL, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify(taskData),
+      });
+      const data = await res.json();
+      if (!res.ok || !data.success) throw new Error(data.message || 'Failed to create task');
+      setTasks((prev) => [data.task, ...prev]);
+      showToast('Task created successfully');
+    } catch (err) {
+      showToast(err.message || 'Unable to create task');
+    }
   };
 
   const handleDelete = (id) => {
-    setTasks((prev) => prev.filter((t) => t.id !== id));
+    setTasks((prev) => prev.filter((t) => t._id !== id));
     showToast('Task deleted');
   };
 
@@ -104,7 +147,13 @@ export default function TaskManagementPage() {
         ))}
       </div>
 
-      {filtered.length === 0 ? (
+      {loading ? (
+        <div className="rounded-xl border border-slate-200 bg-white p-8">
+          <LoadingSpinner size="lg" />
+        </div>
+      ) : error ? (
+        <ErrorState title="Unable to load tasks" message={error} onRetry={() => window.location.reload()} />
+      ) : filtered.length === 0 ? (
         <EmptyState
           icon={FiClipboard}
           title="No tasks found"
@@ -116,10 +165,10 @@ export default function TaskManagementPage() {
         <div className="space-y-4">
           {filtered.map((task) => (
             <MentorTaskCard
-              key={task.id}
+              key={task._id}
               task={task}
               onEdit={handleEdit}
-              onDelete={handleDelete}
+              onDelete={() => handleDelete(task._id)}
             />
           ))}
         </div>
@@ -129,7 +178,7 @@ export default function TaskManagementPage() {
         isOpen={modalOpen}
         onClose={() => setModalOpen(false)}
         onSubmit={handleCreate}
-        interns={assignedInterns}
+        interns={interns}
       />
     </DashboardLayout>
   );
