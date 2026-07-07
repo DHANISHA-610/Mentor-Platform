@@ -1,16 +1,57 @@
-import { useState, useMemo } from 'react';
+import { useEffect, useState, useMemo } from 'react';
 import { FiSearch, FiFilter, FiCheck } from 'react-icons/fi';
 import DashboardLayout from '../../layouts/DashboardLayout';
 import PageHeader from '../../components/ui/PageHeader';
 import MentorCard from '../../components/intern/MentorCard';
 import EmptyState from '../../components/ui/EmptyState';
-import { mentors, allSkills } from '../../utils/mockData';
+import LoadingSpinner from '../../components/ui/LoadingSpinner';
+import ErrorState from '../../components/ui/ErrorState';
+
+const API_URL = 'http://localhost:5000/api/mentors';
 
 export default function SearchMentorsPage() {
+  const [mentors, setMentors] = useState([]);
+  const [allSkills, setAllSkills] = useState([]);
   const [search, setSearch] = useState('');
   const [selectedSkills, setSelectedSkills] = useState([]);
   const [requestedIds, setRequestedIds] = useState(new Set());
   const [toast, setToast] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+
+  useEffect(() => {
+    const fetchMentors = async () => {
+      try {
+        setLoading(true);
+        setError('');
+
+        const [mentorsRes, skillsRes] = await Promise.all([
+          fetch(API_URL),
+          fetch(`${API_URL}/skills`),
+        ]);
+
+        const mentorsData = await mentorsRes.json();
+        const skillsData = await skillsRes.json();
+
+        if (!mentorsRes.ok || !mentorsData.success) {
+          throw new Error(mentorsData.message || 'Failed to load mentors');
+        }
+
+        if (!skillsRes.ok || !skillsData.success) {
+          throw new Error(skillsData.message || 'Failed to load skills');
+        }
+
+        setMentors(mentorsData.mentors || []);
+        setAllSkills(skillsData.skills || []);
+      } catch (err) {
+        setError(err.message || 'Unable to load mentors right now.');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchMentors();
+  }, []);
 
   const filtered = useMemo(() => {
     return mentors.filter((mentor) => {
@@ -26,7 +67,7 @@ export default function SearchMentorsPage() {
 
       return matchesSearch && matchesSkills;
     });
-  }, [search, selectedSkills]);
+  }, [search, selectedSkills, mentors]);
 
   const toggleSkill = (skill) => {
     setSelectedSkills((prev) =>
@@ -35,7 +76,7 @@ export default function SearchMentorsPage() {
   };
 
   const handleRequest = (mentor) => {
-    setRequestedIds((prev) => new Set([...prev, mentor.id]));
+    setRequestedIds((prev) => new Set([...prev, mentor._id]));
     setToast(`Request sent to ${mentor.name}!`);
     setTimeout(() => setToast(null), 3000);
   };
@@ -91,7 +132,17 @@ export default function SearchMentorsPage() {
         </div>
       </div>
 
-      {filtered.length === 0 ? (
+      {loading ? (
+        <div className="rounded-xl border border-slate-200 bg-white p-8">
+          <LoadingSpinner size="lg" />
+        </div>
+      ) : error ? (
+        <ErrorState
+          title="Unable to load mentors"
+          message={error}
+          onRetry={() => window.location.reload()}
+        />
+      ) : filtered.length === 0 ? (
         <EmptyState
           icon={FiSearch}
           title="No mentors found"
@@ -101,10 +152,10 @@ export default function SearchMentorsPage() {
         <div className="grid gap-4 md:grid-cols-2">
           {filtered.map((mentor) => (
             <MentorCard
-              key={mentor.id}
-              mentor={mentor}
+              key={mentor._id}
+              mentor={{ ...mentor, id: mentor._id }}
               onRequest={handleRequest}
-              requested={requestedIds.has(mentor.id)}
+              requested={requestedIds.has(mentor._id)}
             />
           ))}
         </div>

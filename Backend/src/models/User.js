@@ -24,6 +24,70 @@ const userSchema = new mongoose.Schema(
       enum: ['admin', 'mentor', 'intern'],
       default: 'intern',
     },
+    profileImage: {
+      type: String,
+      default: '',
+    },
+    title: {
+      type: String,
+      default: '',
+    },
+    company: {
+      type: String,
+      default: '',
+    },
+    bio: {
+      type: String,
+      default: '',
+    },
+    experience: {
+      type: String,
+      default: '',
+    },
+    skills: {
+      type: [String],
+      default: [],
+    },
+    specialization: {
+      type: String,
+      default: '',
+    },
+    location: {
+      type: String,
+      default: '',
+    },
+    linkedin: {
+      type: String,
+      default: '',
+    },
+    portfolio: {
+      type: String,
+      default: '',
+    },
+    resume: {
+      type: String,
+      default: '',
+    },
+    certifications: {
+      type: [String],
+      default: [],
+    },
+    availability: {
+      type: String,
+      default: 'Available',
+    },
+    approved: {
+      type: Boolean,
+      default: false,
+    },
+    profileCompleted: {
+      type: Boolean,
+      default: false,
+    },
+    rejectionReason: {
+      type: String,
+      default: '',
+    },
   },
   {
     timestamps: true,

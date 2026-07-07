@@ -21,6 +21,8 @@ const registerUser = async (req, res, next) => {
       email,
       password,
       role: role || 'intern',
+      approved: role === 'mentor' ? false : true,
+      profileCompleted: role === 'mentor' ? false : true,
     });
 
     if (user) {
@@ -31,6 +33,8 @@ const registerUser = async (req, res, next) => {
           name: user.name,
           email: user.email,
           role: user.role,
+          approved: user.approved,
+          profileCompleted: user.profileCompleted,
         },
         token: generateToken(user._id),
       });
@@ -62,6 +66,8 @@ const loginUser = async (req, res, next) => {
           name: user.name,
           email: user.email,
           role: user.role,
+          approved: user.approved,
+          profileCompleted: user.profileCompleted,
         },
         token: generateToken(user._id),
       });

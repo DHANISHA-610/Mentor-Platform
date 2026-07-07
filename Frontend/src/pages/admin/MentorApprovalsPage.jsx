@@ -6,7 +6,6 @@ import StatusBadge from '../../components/ui/StatusBadge';
 import EmptyState from '../../components/ui/EmptyState';
 import LoadingSpinner from '../../components/ui/LoadingSpinner';
 import ErrorState from '../../components/ui/ErrorState';
-import { mentorApplications as initialApplications } from '../../utils/mockData';
 
 export default function MentorApprovalsPage() {
   const [applications, setApplications] = useState([]);
@@ -17,13 +16,24 @@ export default function MentorApprovalsPage() {
   const [rejectReason, setRejectReason] = useState('');
   const [toast, setToast] = useState(null);
 
-  const loadApplications = () => {
+  const loadApplications = async () => {
     setLoading(true);
     setError(false);
-    setTimeout(() => {
-      setApplications(initialApplications);
+    try {
+      const res = await fetch('http://localhost:5000/api/admin/mentor-applications', {
+        headers: { Authorization: `Bearer ${localStorage.getItem('mentor_platform_token') || ''}` },
+      });
+      const data = await res.json();
+      if (data.success) {
+        setApplications(data.applications || []);
+      } else {
+        setError(true);
+      }
+    } catch (err) {
+      setError(true);
+    } finally {
       setLoading(false);
-    }, 800);
+    }
   };
 
   useEffect(() => { loadApplications(); }, []);
@@ -33,20 +43,54 @@ export default function MentorApprovalsPage() {
     setTimeout(() => setToast(null), 3000);
   };
 
-  const handleApprove = (id) => {
-    setApplications((prev) => prev.filter((a) => a.id !== id));
-    showToast('Mentor application approved');
+  const handleApprove = async (id) => {
+    try {
+      const res = await fetch(`http://localhost:5000/api/admin/mentor-applications/${id}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${localStorage.getItem('mentor_platform_token') || ''}`,
+        },
+        body: JSON.stringify({ action: 'approve' }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        setApplications((prev) => prev.filter((a) => a._id !== id));
+        showToast('Mentor application approved');
+      } else {
+        showToast(data.message || 'Unable to approve application', 'error');
+      }
+    } catch (err) {
+      showToast('Server connection error', 'error');
+    }
   };
 
-  const handleReject = () => {
+  const handleReject = async () => {
     if (!rejectReason.trim()) {
       showToast('Please provide a rejection reason', 'error');
       return;
     }
-    setApplications((prev) => prev.filter((a) => a.id !== rejectModal.id));
-    setRejectModal(null);
-    setRejectReason('');
-    showToast('Mentor application rejected');
+    try {
+      const res = await fetch(`http://localhost:5000/api/admin/mentor-applications/${rejectModal._id}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${localStorage.getItem('mentor_platform_token') || ''}`,
+        },
+        body: JSON.stringify({ action: 'reject', rejectionReason }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        setApplications((prev) => prev.filter((a) => a._id !== rejectModal._id));
+        setRejectModal(null);
+        setRejectReason('');
+        showToast('Mentor application rejected');
+      } else {
+        showToast(data.message || 'Unable to reject application', 'error');
+      }
+    } catch (err) {
+      showToast('Server connection error', 'error');
+    }
   };
 
   if (error) {
@@ -87,7 +131,7 @@ export default function MentorApprovalsPage() {
       ) : (
         <div className="space-y-4">
           {applications.map((app) => (
-            <div key={app.id} className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
+            <div key={app._id} className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
               <div className="flex flex-col gap-4 sm:flex-row sm:items-start">
                 <img src={app.avatar} alt={app.name} className="h-14 w-14 rounded-full bg-slate-100" />
                 <div className="min-w-0 flex-1">
@@ -95,13 +139,13 @@ export default function MentorApprovalsPage() {
                     <div>
                       <h3 className="text-lg font-semibold text-slate-900">{app.name}</h3>
                       <p className="text-sm text-slate-500">{app.title} at {app.company}</p>
-                      <p className="text-xs text-slate-400">{app.experience} experience · Applied {app.appliedDate}</p>
+                      <p className="text-xs text-slate-400">{app.experience || 'Experience not provided'} experience · Applied {app.appliedDate}</p>
                     </div>
                     <StatusBadge status={app.status} />
                   </div>
                   <p className="mt-3 text-sm text-slate-600">{app.bio}</p>
                   <div className="mt-3 flex flex-wrap gap-1.5">
-                    {app.skills.map((skill) => (
+                    {(app.skills || []).map((skill) => (
                       <span key={skill} className="rounded-md bg-slate-100 px-2 py-0.5 text-xs font-medium text-slate-600">
                         {skill}
                       </span>
@@ -118,7 +162,7 @@ export default function MentorApprovalsPage() {
                   View Credentials
                 </button>
                 <button
-                  onClick={() => handleApprove(app.id)}
+                  onClick={() => handleApprove(app._id)}
                   className="inline-flex items-center gap-1.5 rounded-lg bg-emerald-600 px-4 py-1.5 text-sm font-medium text-white hover:bg-emerald-700"
                 >
                   <FiCheck className="h-4 w-4" />
@@ -152,7 +196,7 @@ export default function MentorApprovalsPage() {
               <div>
                 <h3 className="font-semibold text-slate-900">{detailModal.name}</h3>
                 <p className="text-sm text-slate-500">{detailModal.email}</p>
-                <p className="text-sm text-slate-500">{detailModal.title} at {detailModal.company}</p>
+                <p className="text-sm text-slate-500">{detailModal.title || 'No title'} at {detailModal.company || 'No company'}</p>
               </div>
             </div>
             <p className="mt-4 text-sm text-slate-600">{detailModal.bio}</p>
@@ -177,7 +221,7 @@ export default function MentorApprovalsPage() {
             </div>
             <div className="mt-6 flex gap-2">
               <button
-                onClick={() => { handleApprove(detailModal.id); setDetailModal(null); }}
+                onClick={() => { handleApprove(detailModal._id); setDetailModal(null); }}
                 className="flex-1 rounded-lg bg-emerald-600 py-2 text-sm font-medium text-white hover:bg-emerald-700"
               >
                 Approve
