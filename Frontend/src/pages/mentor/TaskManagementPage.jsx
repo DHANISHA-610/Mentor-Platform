@@ -37,14 +37,14 @@ export default function TaskManagementPage() {
         setError('');
         const [tasksRes, internsRes] = await Promise.all([
           fetch(API_URL, { headers: { Authorization: `Bearer ${token}` } }),
-          fetch('http://localhost:5000/api/mentors'),
+          fetch('http://localhost:5000/api/interns'),
         ]);
         const tasksData = await tasksRes.json();
         const internsData = await internsRes.json();
         if (!tasksRes.ok || !tasksData.success) throw new Error(tasksData.message || 'Failed to load tasks');
         if (!internsRes.ok || !internsData.success) throw new Error(internsData.message || 'Failed to load interns');
         setTasks(tasksData.tasks || []);
-        setInterns((internsData.mentors || []).map((mentor) => ({ id: mentor._id, name: mentor.name })));
+        setInterns((internsData.interns || []).map((intern) => ({ id: intern._id, name: intern.name })));
       } catch (err) {
         setError(err.message || 'Unable to load tasks');
       } finally {
@@ -58,6 +58,25 @@ export default function TaskManagementPage() {
   const filtered = activeTab === 'all'
     ? tasks
     : tasks.filter((t) => t.status === activeTab);
+
+  const handleStatusChange = async (taskId, status) => {
+    try {
+      const res = await fetch(`${API_URL}/${taskId}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ status }),
+      });
+      const data = await res.json();
+      if (!res.ok || !data.success) throw new Error(data.message || 'Failed to update task status');
+      setTasks((prev) => prev.map((task) => (task._id === taskId ? data.task : task)));
+      showToast('Task status updated');
+    } catch (err) {
+      showToast(err.message || 'Unable to update task status');
+    }
+  };
 
   const stats = {
     total: tasks.length,
@@ -91,9 +110,19 @@ export default function TaskManagementPage() {
     }
   };
 
-  const handleDelete = (id) => {
-    setTasks((prev) => prev.filter((t) => t._id !== id));
-    showToast('Task deleted');
+  const handleDelete = async (id) => {
+    try {
+      const res = await fetch(`${API_URL}/${id}`, {
+        method: 'DELETE',
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const data = await res.json();
+      if (!res.ok || !data.success) throw new Error(data.message || 'Failed to delete task');
+      setTasks((prev) => prev.filter((t) => t._id !== id));
+      showToast('Task deleted successfully');
+    } catch (err) {
+      showToast(err.message || 'Unable to delete task');
+    }
   };
 
   const handleEdit = () => {
@@ -169,6 +198,7 @@ export default function TaskManagementPage() {
               task={task}
               onEdit={handleEdit}
               onDelete={() => handleDelete(task._id)}
+              onStatusChange={handleStatusChange}
             />
           ))}
         </div>

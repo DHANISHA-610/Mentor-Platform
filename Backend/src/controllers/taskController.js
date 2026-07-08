@@ -46,17 +46,60 @@ const getTasksForUser = async (req, res, next) => {
   }
 };
 
-const updateTaskStatus = async (req, res, next) => {
+const updateTask = async (req, res, next) => {
   try {
-    const { status } = req.body;
-    const task = await Task.findOne({ _id: req.params.id, $or: [{ mentor: req.user._id }, { assignee: req.user._id }] });
+    const task = await Task.findOne({
+      _id: req.params.id,
+      $or: [{ mentor: req.user._id }, { assignee: req.user._id }],
+    });
 
     if (!task) {
       res.status(404);
       throw new Error('Task not found');
     }
 
-    task.status = status;
+    const { title, description, dueDate, priority, status } = req.body;
+    const updates = {};
+
+    if (typeof title === 'string') {
+      updates.title = title.trim();
+    }
+
+    if (typeof description === 'string') {
+      updates.description = description;
+    }
+
+    if (dueDate) {
+      updates.dueDate = dueDate;
+    }
+
+    if (priority) {
+      updates.priority = priority;
+    }
+
+    if (status) {
+      updates.status = status;
+    }
+
+    if (Object.keys(updates).length === 0) {
+      res.status(400);
+      throw new Error('No valid updates provided');
+    }
+
+    const isMentor = req.user.role === 'mentor';
+    const isAssignedUser = req.user._id.toString() === task.assignee.toString();
+
+    if (!isMentor && Object.keys(updates).some((key) => key !== 'status')) {
+      res.status(403);
+      throw new Error('Only mentors can edit task details');
+    }
+
+    if (!isMentor && !isAssignedUser) {
+      res.status(403);
+      throw new Error('You are not allowed to update this task');
+    }
+
+    Object.assign(task, updates);
     await task.save();
 
     res.json({ success: true, task });
@@ -65,8 +108,33 @@ const updateTaskStatus = async (req, res, next) => {
   }
 };
 
+const deleteTask = async (req, res, next) => {
+  try {
+    const task = await Task.findById(req.params.id);
+
+    if (!task) {
+      res.status(404);
+      throw new Error('Task not found');
+    }
+
+    const isMentor = req.user.role === 'mentor';
+    const isTaskMentor = req.user._id.toString() === task.mentor.toString();
+
+    if (!isMentor && !isTaskMentor) {
+      res.status(403);
+      throw new Error('Only mentors can delete tasks');
+    }
+
+    await task.deleteOne();
+    res.json({ success: true, message: 'Task deleted successfully' });
+  } catch (error) {
+    next(error);
+  }
+};
+
 module.exports = {
   createTask,
   getTasksForUser,
-  updateTaskStatus,
+  updateTask,
+  deleteTask,
 };

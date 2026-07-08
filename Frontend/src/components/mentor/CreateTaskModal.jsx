@@ -27,10 +27,10 @@ export default function CreateTaskModal({ isOpen, onClose, onSubmit, interns }) 
     e.preventDefault();
     if (!validate()) return;
 
-    const assignee = interns.find((i) => i.id === Number(form.assigneeId));
+    const assignee = interns.find((i) => i.id === form.assigneeId);
     onSubmit({
       ...form,
-      assigneeId: Number(form.assigneeId),
+      assigneeId: form.assigneeId,
       assignee: assignee?.name || 'Unknown',
       status: 'pending',
     });

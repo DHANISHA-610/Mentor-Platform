@@ -49,6 +49,24 @@ export default function MyTasksPage() {
     ? tasks
     : tasks.filter((t) => t.status === activeTab);
 
+  const handleStatusChange = async (taskId, status) => {
+    try {
+      const res = await fetch(`${API_URL}/${taskId}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ status }),
+      });
+      const data = await res.json();
+      if (!res.ok || !data.success) throw new Error(data.message || 'Failed to update task status');
+      setTasks((prev) => prev.map((task) => (task._id === taskId ? data.task : task)));
+    } catch (err) {
+      setError(err.message || 'Unable to update task status');
+    }
+  };
+
   const stats = {
     total: tasks.length,
     inProgress: tasks.filter((t) => t.status === 'in_progress').length,
@@ -98,7 +116,7 @@ export default function MyTasksPage() {
       ) : (
         <div className="space-y-4">
           {filtered.map((task) => (
-            <TaskCard key={task._id} task={task} />
+            <TaskCard key={task._id} task={task} onStatusChange={handleStatusChange} />
           ))}
         </div>
       )}

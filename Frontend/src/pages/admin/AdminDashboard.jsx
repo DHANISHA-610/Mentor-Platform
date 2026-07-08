@@ -1,23 +1,90 @@
+import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { FiUsers, FiLink, FiClipboard, FiUserCheck, FiArrowRight } from 'react-icons/fi';
 import DashboardLayout from '../../layouts/DashboardLayout';
 import PageHeader from '../../components/ui/PageHeader';
 import StatCard from '../../components/ui/StatCard';
 import StatusBadge from '../../components/ui/StatusBadge';
-import { adminMetrics, adminUsers, mentorApplications } from '../../utils/mockData';
+import LoadingSpinner from '../../components/ui/LoadingSpinner';
+import ErrorState from '../../components/ui/ErrorState';
+import { useAuth } from '../../hooks/useAuth';
+
+const API_URL = 'http://localhost:5000/api/dashboard';
 
 export default function AdminDashboard() {
+  const { token } = useAuth();
   const navigate = useNavigate();
+  const [data, setData] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+
+  useEffect(() => {
+    const fetchDashboard = async () => {
+      try {
+        setLoading(true);
+        setError('');
+        const res = await fetch(API_URL, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        const result = await res.json();
+        if (!res.ok || !result.success) {
+          throw new Error(result.message || 'Failed to load dashboard');
+        }
+        setData(result.dashboard);
+      } catch (err) {
+        setError(err.message || 'Unable to load dashboard');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    if (!token) {
+      setLoading(false);
+      return;
+    }
+
+    fetchDashboard();
+  }, [token]);
+
+  if (loading) {
+    return (
+      <DashboardLayout>
+        <div className="flex min-h-80 items-center justify-center">
+          <LoadingSpinner size="lg" />
+        </div>
+      </DashboardLayout>
+    );
+  }
+
+  if (error) {
+    return (
+      <DashboardLayout>
+        <div className="py-12">
+          <ErrorState message={error} />
+        </div>
+      </DashboardLayout>
+    );
+  }
+
+  const metrics = data?.metrics ?? {
+    totalUsers: 0,
+    activePairings: 0,
+    pendingApprovals: 0,
+    tasksThisMonth: 0,
+    roleCounts: { admin: 0, mentor: 0, intern: 0 },
+  };
+  const recentUsers = data?.recentUsers ?? [];
+  const mentorApplications = data?.mentorApplications ?? [];
 
   return (
     <DashboardLayout>
       <PageHeader title="Admin Dashboard" subtitle="Platform overview and management" />
 
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <StatCard icon={FiUsers} label="Total Users" value={adminMetrics.totalUsers} color="blue" />
-        <StatCard icon={FiLink} label="Active Pairings" value={adminMetrics.activePairings} color="green" />
-        <StatCard icon={FiUserCheck} label="Pending Approvals" value={adminMetrics.pendingApprovals} color="yellow" />
-        <StatCard icon={FiClipboard} label="Tasks This Month" value={adminMetrics.tasksThisMonth} color="purple" />
+        <StatCard icon={FiUsers} label="Total Users" value={metrics.totalUsers} color="blue" />
+        <StatCard icon={FiLink} label="Active Pairings" value={metrics.activePairings} color="green" />
+        <StatCard icon={FiUserCheck} label="Pending Approvals" value={metrics.pendingApprovals} color="yellow" />
+        <StatCard icon={FiClipboard} label="Tasks This Month" value={metrics.tasksThisMonth} color="purple" />
       </div>
 
       <div className="mt-6 flex flex-wrap gap-3">
@@ -46,16 +113,24 @@ export default function AdminDashboard() {
             </button>
           </div>
           <div className="space-y-3">
-            {mentorApplications.slice(0, 3).map((app) => (
-              <div key={app.id} className="flex items-center gap-4 rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
-                <img src={app.avatar} alt={app.name} className="h-10 w-10 rounded-full bg-slate-100" />
-                <div className="min-w-0 flex-1">
-                  <p className="font-medium text-slate-900">{app.name}</p>
-                  <p className="text-sm text-slate-500">{app.title} at {app.company}</p>
-                </div>
-                <StatusBadge status={app.status} />
+            {mentorApplications.length === 0 ? (
+              <div className="rounded-xl border border-slate-200 bg-white p-6 text-sm text-slate-500">
+                No pending mentor applications.
               </div>
-            ))}
+            ) : (
+              mentorApplications.map((app) => (
+                <div key={app.id} className="flex items-center gap-4 rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+                  <img src={app.avatar} alt={app.name} className="h-10 w-10 rounded-full bg-slate-100" />
+                  <div className="min-w-0 flex-1">
+                    <p className="font-medium text-slate-900">{app.name}</p>
+                    <p className="text-sm text-slate-500">
+                      {app.title} {app.company ? `at ${app.company}` : ''}
+                    </p>
+                  </div>
+                  <StatusBadge status={app.status} />
+                </div>
+              ))
+            )}
           </div>
         </section>
 
@@ -67,21 +142,27 @@ export default function AdminDashboard() {
             </button>
           </div>
           <div className="space-y-3">
-            {adminUsers.slice(0, 5).map((u) => (
-              <div key={u.id} className="flex items-center gap-4 rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
-                <img src={u.avatar} alt={u.name} className="h-10 w-10 rounded-full bg-slate-100" />
-                <div className="min-w-0 flex-1">
-                  <p className="font-medium text-slate-900">{u.name}</p>
-                  <p className="text-sm text-slate-500">{u.email}</p>
-                </div>
-                <div className="flex flex-col items-end gap-1">
-                  <span className="rounded-full bg-slate-100 px-2 py-0.5 text-xs font-medium capitalize text-slate-600">
-                    {u.role}
-                  </span>
-                  <StatusBadge status={u.status} />
-                </div>
+            {recentUsers.length === 0 ? (
+              <div className="rounded-xl border border-slate-200 bg-white p-6 text-sm text-slate-500">
+                No recent user signups yet.
               </div>
-            ))}
+            ) : (
+              recentUsers.map((u) => (
+                <div key={u.id} className="flex items-center gap-4 rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+                  <img src={u.avatar} alt={u.name} className="h-10 w-10 rounded-full bg-slate-100" />
+                  <div className="min-w-0 flex-1">
+                    <p className="font-medium text-slate-900">{u.name}</p>
+                    <p className="text-sm text-slate-500">{u.email}</p>
+                  </div>
+                  <div className="flex flex-col items-end gap-1">
+                    <span className="rounded-full bg-slate-100 px-2 py-0.5 text-xs font-medium capitalize text-slate-600">
+                      {u.role}
+                    </span>
+                    <StatusBadge status={u.status} />
+                  </div>
+                </div>
+              ))
+            )}
           </div>
         </section>
       </div>
@@ -89,7 +170,7 @@ export default function AdminDashboard() {
       <section className="mt-8">
         <h2 className="mb-4 text-lg font-semibold text-slate-900">Users by Role</h2>
         <div className="grid gap-4 sm:grid-cols-3">
-          {Object.entries(adminMetrics.roleCounts).map(([role, count]) => (
+          {Object.entries(metrics.roleCounts).map(([role, count]) => (
             <div key={role} className="rounded-xl border border-slate-200 bg-white p-6 text-center shadow-sm">
               <p className="text-3xl font-bold text-brand-600">{count}</p>
               <p className="mt-1 text-sm capitalize text-slate-500">{role}s</p>

@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { FiSearch, FiPlus, FiX, FiCheck, FiEdit2 } from 'react-icons/fi';
 import DashboardLayout from '../../layouts/DashboardLayout';
 import PageHeader from '../../components/ui/PageHeader';
@@ -6,12 +6,15 @@ import StatusBadge from '../../components/ui/StatusBadge';
 import EmptyState from '../../components/ui/EmptyState';
 import LoadingSpinner from '../../components/ui/LoadingSpinner';
 import ErrorState from '../../components/ui/ErrorState';
-import { adminUsers as initialUsers } from '../../utils/mockData';
+import { useAuth } from '../../hooks/useAuth';
+
+const API_URL = 'http://localhost:5000/api/admin/users';
 
 export default function UserManagementPage() {
+  const { token } = useAuth();
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(false);
+  const [error, setError] = useState('');
   const [search, setSearch] = useState('');
   const [roleFilter, setRoleFilter] = useState('all');
   const [statusFilter, setStatusFilter] = useState('all');
@@ -21,16 +24,31 @@ export default function UserManagementPage() {
   const [toast, setToast] = useState(null);
   const [form, setForm] = useState({ name: '', email: '', role: 'intern' });
 
-  const loadUsers = () => {
+  const loadUsers = async () => {
     setLoading(true);
-    setError(false);
-    setTimeout(() => {
-      setUsers(initialUsers);
+    setError('');
+
+    try {
+      const res = await fetch(API_URL, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const data = await res.json();
+      if (!res.ok || !data.success) {
+        throw new Error(data.message || 'Failed to load users');
+      }
+      setUsers(data.users || []);
+    } catch (err) {
+      setError(err.message || 'Unable to load users');
+    } finally {
       setLoading(false);
-    }, 800);
+    }
   };
 
-  useEffect(() => { loadUsers(); }, []);
+  useEffect(() => {
+    if (token) {
+      loadUsers();
+    }
+  }, [token]);
 
   const filtered = useMemo(() => {
     const q = search.toLowerCase();

@@ -1,19 +1,51 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { FiSearch, FiSend, FiArrowLeft } from 'react-icons/fi';
 import DashboardLayout from '../layouts/DashboardLayout';
 import PageHeader from '../components/ui/PageHeader';
 import { useAuth } from '../hooks/useAuth';
-import { internConversations, mentorConversations } from '../utils/mockData';
+import EmptyState from '../components/ui/EmptyState';
+import LoadingSpinner from '../components/ui/LoadingSpinner';
+import ErrorState from '../components/ui/ErrorState';
+
+const API_URL = 'http://localhost:5000/api/chat';
 
 export default function ChatPage() {
-  const { user } = useAuth();
-  const initialConversations = user?.role === 'mentor' ? mentorConversations : internConversations;
-
-  const [conversations, setConversations] = useState(initialConversations);
-  const [activeId, setActiveId] = useState(conversations[0]?.id || null);
+  const { token } = useAuth();
+  const [conversations, setConversations] = useState([]);
+  const [activeId, setActiveId] = useState(null);
   const [search, setSearch] = useState('');
   const [message, setMessage] = useState('');
   const [showMobileChat, setShowMobileChat] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+
+  useEffect(() => {
+    const fetchConversations = async () => {
+      try {
+        setLoading(true);
+        setError('');
+
+        const res = await fetch(API_URL, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        const data = await res.json();
+        if (!res.ok || !data.success) {
+          throw new Error(data.message || 'Failed to load conversations');
+        }
+
+        setConversations(data.conversations || []);
+        setActiveId(data.conversations?.[0]?.id || null);
+      } catch (err) {
+        setError(err.message || 'Unable to load conversations');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    if (token) {
+      fetchConversations();
+    }
+  }, [token]);
 
   const activeConv = conversations.find((c) => c.id === activeId);
 

@@ -67,7 +67,28 @@ const reviewMentorApplication = async (req, res, next) => {
   }
 };
 
+const getUsers = async (req, res, next) => {
+  try {
+    const users = await User.find({}, { password: 0 }).sort({ createdAt: -1 });
+
+    const transformed = users.map((user) => ({
+      id: user._id,
+      name: user.name,
+      email: user.email,
+      role: user.role,
+      status: user.role === 'mentor' ? (user.approved ? 'active' : 'inactive') : 'active',
+      joinedDate: user.createdAt?.toISOString().split('T')[0] || '',
+      avatar: user.profileImage || `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(user.name)}`,
+    }));
+
+    res.json({ success: true, users: transformed });
+  } catch (error) {
+    next(error);
+  }
+};
+
 module.exports = {
   getPendingMentorApplications,
   reviewMentorApplication,
+  getUsers,
 };

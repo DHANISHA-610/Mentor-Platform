@@ -7,7 +7,7 @@ const priorityColors = {
   low: 'text-slate-600 bg-slate-100',
 };
 
-export default function MentorTaskCard({ task, onEdit, onDelete }) {
+export default function MentorTaskCard({ task, onEdit, onDelete, onStatusChange }) {
   const assigneeName = task.assigneeName || task.assignee || 'Unknown';
   const dueDate = task.dueDate ? new Date(task.dueDate).toLocaleDateString() : 'TBD';
   const priority = task.priority || 'medium';
@@ -36,21 +36,36 @@ export default function MentorTaskCard({ task, onEdit, onDelete }) {
         </div>
         <StatusBadge status={task.status} />
       </div>
-      <div className="mt-4 flex gap-2 border-t border-slate-100 pt-4">
-        <button
-          onClick={() => onEdit(task)}
-          className="inline-flex items-center gap-1.5 rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-sm font-medium text-slate-700 transition-colors hover:bg-slate-50"
-        >
-          <FiEdit2 className="h-3.5 w-3.5" />
-          Edit
-        </button>
-        <button
-          onClick={() => onDelete(task.id)}
-          className="inline-flex items-center gap-1.5 rounded-lg border border-red-200 bg-white px-3 py-1.5 text-sm font-medium text-red-600 transition-colors hover:bg-red-50"
-        >
-          <FiTrash2 className="h-3.5 w-3.5" />
-          Delete
-        </button>
+      <div className="mt-4 flex flex-wrap items-center justify-between gap-3 border-t border-slate-100 pt-4">
+        <div className="flex items-center gap-2">
+          <span className="text-sm text-slate-500">Set status</span>
+          <select
+            value={task.status || 'pending'}
+            onChange={(e) => onStatusChange?.(task._id, e.target.value)}
+            className="rounded-lg border border-slate-300 px-3 py-1.5 text-sm text-slate-700 focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/20"
+          >
+            <option value="pending">Pending</option>
+            <option value="in_progress">In Progress</option>
+            <option value="completed">Completed</option>
+            <option value="overdue">Overdue</option>
+          </select>
+        </div>
+        <div className="flex gap-2">
+          <button
+            onClick={() => onEdit(task)}
+            className="inline-flex items-center gap-1.5 rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-sm font-medium text-slate-700 transition-colors hover:bg-slate-50"
+          >
+            <FiEdit2 className="h-3.5 w-3.5" />
+            Edit
+          </button>
+          <button
+            onClick={() => onDelete(task._id)}
+            className="inline-flex items-center gap-1.5 rounded-lg border border-red-200 bg-white px-3 py-1.5 text-sm font-medium text-red-600 transition-colors hover:bg-red-50"
+          >
+            <FiTrash2 className="h-3.5 w-3.5" />
+            Delete
+          </button>
+        </div>
       </div>
     </div>
   );
