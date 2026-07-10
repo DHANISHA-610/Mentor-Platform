@@ -1,6 +1,17 @@
 const User = require('../models/User');
 const Request = require('../models/Request');
 const Task = require('../models/Task');
+const Conversation = require('../models/Conversation');
+
+const formatTimestamp = (date) => {
+  if (!date) return '';
+  const timestamp = new Date(date);
+  const today = new Date();
+  if (timestamp.toDateString() === today.toDateString()) {
+    return timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+  }
+  return timestamp.toLocaleDateString([], { month: 'short', day: 'numeric' });
+};
 
 const getDashboardData = async (req, res, next) => {
   try {
@@ -23,16 +34,49 @@ const getDashboardData = async (req, res, next) => {
 
       const recentRequests = requests.slice(0, 3);
 
+      const conversations = await Conversation.find({ participants: req.user._id })
+        .populate('participants', 'name profileImage title specialization role')
+        .sort({ lastMessageAt: -1, updatedAt: -1 })
+        .limit(5);
+
+      const unreadMessages = conversations.reduce((sum, conversation) => {
+        const unreadInfo = (conversation.unreadCounts || []).find(
+          (entry) => entry.user.toString() === req.user._id.toString()
+        );
+        return sum + (unreadInfo?.count || 0);
+      }, 0);
+
+      const recentConversations = conversations.map((conversation) => {
+        const otherParticipant = conversation.participants.find(
+          (participant) => participant._id.toString() !== req.user._id.toString()
+        );
+
+        return {
+          id: conversation._id.toString(),
+          name: otherParticipant?.name || 'Intern',
+          avatar:
+            otherParticipant?.profileImage ||
+            `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(
+              otherParticipant?.name || 'chat'
+            )}`,
+          lastMessage: conversation.lastMessage || 'Start the conversation',
+          lastMessageTime: formatTimestamp(conversation.lastMessageAt || conversation.updatedAt),
+          unread: (conversation.unreadCounts || []).find(
+            (entry) => entry.user.toString() === req.user._id.toString()
+          )?.count || 0,
+        };
+      });
+
       return res.json({
         success: true,
         dashboard: {
           activeMentors,
           pendingRequests,
           completedTasks,
-          unreadMessages: 0,
+          unreadMessages,
           recentTasks,
           recentRequests,
-          recentConversations: [],
+          recentConversations,
         },
       });
     }
@@ -82,16 +126,49 @@ const getDashboardData = async (req, res, next) => {
       const recentRequests = requests.slice(0, 3);
       const recentTasks = tasks.slice(0, 3);
 
+      const conversations = await Conversation.find({ participants: req.user._id })
+        .populate('participants', 'name profileImage title specialization role')
+        .sort({ lastMessageAt: -1, updatedAt: -1 })
+        .limit(5);
+
+      const unreadMessages = conversations.reduce((sum, conversation) => {
+        const unreadInfo = (conversation.unreadCounts || []).find(
+          (entry) => entry.user.toString() === req.user._id.toString()
+        );
+        return sum + (unreadInfo?.count || 0);
+      }, 0);
+
+      const recentConversations = conversations.map((conversation) => {
+        const otherParticipant = conversation.participants.find(
+          (participant) => participant._id.toString() !== req.user._id.toString()
+        );
+
+        return {
+          id: conversation._id.toString(),
+          name: otherParticipant?.name || 'Mentor',
+          avatar:
+            otherParticipant?.profileImage ||
+            `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(
+              otherParticipant?.name || 'chat'
+            )}`,
+          lastMessage: conversation.lastMessage || 'Start the conversation',
+          lastMessageTime: formatTimestamp(conversation.lastMessageAt || conversation.updatedAt),
+          unread: (conversation.unreadCounts || []).find(
+            (entry) => entry.user.toString() === req.user._id.toString()
+          )?.count || 0,
+        };
+      });
+
       return res.json({
         success: true,
         dashboard: {
           assignedInterns,
           pendingRequests,
           activeTasks,
-          unreadMessages: 0,
+          unreadMessages,
           recentRequests,
           recentTasks,
-          recentConversations: [],
+          recentConversations,
         },
       });
     }

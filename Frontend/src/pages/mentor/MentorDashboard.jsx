@@ -50,7 +50,7 @@ export default function MentorDashboard() {
   if (loading) {
     return (
       <DashboardLayout>
-        <div className="flex min-h-[320px] items-center justify-center">
+        <div className="flex min-h-80 items-center justify-center">
           <LoadingSpinner size="lg" />
         </div>
       </DashboardLayout>
