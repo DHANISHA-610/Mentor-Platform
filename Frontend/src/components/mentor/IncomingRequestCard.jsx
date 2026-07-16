@@ -33,14 +33,14 @@ export default function IncomingRequestCard({ request, onAccept, onDecline }) {
             <div className="mt-4 flex gap-2">
               <button
                 onClick={() => onAccept(request._id)}
-                className="inline-flex items-center gap-1.5 rounded-lg bg-emerald-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-emerald-700"
+                className="inline-flex items-center gap-1.5 rounded-lg bg-emerald-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-emerald-700 cursor-pointer"
               >
                 <FiCheck className="h-4 w-4" />
                 Accept
               </button>
               <button
                 onClick={() => onDecline(request._id)}
-                className="inline-flex items-center gap-1.5 rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-700 transition-colors hover:bg-slate-50"
+                className="inline-flex items-center gap-1.5 rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-700 transition-colors hover:bg-slate-50 cursor-pointer"
               >
                 <FiX className="h-4 w-4" />
                 Decline

@@ -18,6 +18,7 @@ import MentorDashboard from '../pages/mentor/MentorDashboard';
 import IncomingRequestsPage from '../pages/mentor/IncomingRequestsPage';
 import AssignedInternsPage from '../pages/mentor/AssignedInternsPage';
 import TaskManagementPage from '../pages/mentor/TaskManagementPage';
+import TaskDetailsPage from '../pages/TaskDetailsPage';
 
 import AdminDashboard from '../pages/admin/AdminDashboard';
 import AnalyticsPage from '../pages/admin/AnalyticsPage';
@@ -139,6 +140,14 @@ export default function AppRoutes() {
         element={
           <ProtectedRoute allowedRoles={['mentor']}>
             <TaskManagementPage />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/tasks/:id"
+        element={
+          <ProtectedRoute allowedRoles={['intern', 'mentor']}>
+            <TaskDetailsPage />
           </ProtectedRoute>
         }
       />

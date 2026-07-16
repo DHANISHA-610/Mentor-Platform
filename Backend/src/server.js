@@ -47,9 +47,17 @@ const server = http.createServer(app);
 const io = new Server(server, {
   cors: {
     origin: (origin, callback) => {
-      if (!origin || CLIENT_URLS.includes(origin)) {
+      if (!origin) {
         return callback(null, true);
       }
+
+      const normalizedOrigin = origin.replace(/:\d+$/, '');
+      const isLocalhost = /^(https?:\/\/)?(localhost|127\.0\.0\.1)$/.test(normalizedOrigin);
+
+      if (isLocalhost || CLIENT_URLS.includes(origin)) {
+        return callback(null, true);
+      }
+
       callback(new Error('Not allowed by CORS'));
     },
     methods: ['GET', 'POST'],
@@ -236,6 +244,16 @@ io.on('connection', (socket) => {
 const startServer = async () => {
   try {
     await connectDB();
+
+    server.on('error', (error) => {
+      if (error.code === 'EADDRINUSE') {
+        console.error(`Port ${PORT} is already in use. Make sure no other server is running on port ${PORT}.`);
+      } else {
+        console.error('Server error:', error.message);
+      }
+      process.exit(1);
+    });
+
     server.listen(PORT, () => {
       console.log(`Server running on port ${PORT}`);
     });

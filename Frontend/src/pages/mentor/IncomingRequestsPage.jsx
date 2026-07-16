@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { FiInbox, FiCheck } from 'react-icons/fi';
+import { FiInbox, FiCheck, FiClock, FiCheckCircle, FiXCircle } from 'react-icons/fi';
 import DashboardLayout from '../../layouts/DashboardLayout';
 import PageHeader from '../../components/ui/PageHeader';
 import StatCard from '../../components/ui/StatCard';
@@ -14,8 +14,8 @@ const API_URL = 'http://localhost:5000/api/requests';
 const tabs = [
   { key: 'all', label: 'All' },
   { key: 'pending', label: 'Pending' },
-  { key: 'accepted', label: 'Accepted' },
-  { key: 'declined', label: 'Declined' },
+  { key: 'approved', label: 'Accepted' },
+  { key: 'rejected', label: 'Declined' },
 ];
 
 export default function IncomingRequestsPage() {
@@ -52,8 +52,8 @@ export default function IncomingRequestsPage() {
   const counts = {
     all: requests.length,
     pending: requests.filter((r) => r.status === 'pending').length,
-    accepted: requests.filter((r) => r.status === 'accepted').length,
-    declined: requests.filter((r) => r.status === 'declined').length,
+    approved: requests.filter((r) => r.status === 'approved').length,
+    rejected: requests.filter((r) => r.status === 'rejected').length,
   };
 
   const showToast = (message) => {
@@ -112,9 +112,9 @@ export default function IncomingRequestsPage() {
 
       <div className="mb-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <StatCard icon={FiInbox} label="Total Requests" value={counts.all} color="blue" />
-        <StatCard label="Pending" value={counts.pending} color="yellow" />
-        <StatCard label="Accepted" value={counts.accepted} color="green" />
-        <StatCard label="Declined" value={counts.declined} color="red" />
+        <StatCard icon={FiClock} label="Pending" value={counts.pending} color="yellow" />
+        <StatCard icon={FiCheckCircle} label="Accepted" value={counts.approved} color="green" />
+        <StatCard icon={FiXCircle} label="Declined" value={counts.rejected} color="red" />
       </div>
 
       <div className="mb-6 flex gap-2 overflow-x-auto border-b border-slate-200 pb-px">

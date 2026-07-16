@@ -1,8 +1,11 @@
 import { FiStar, FiSend } from 'react-icons/fi';
 
 export default function MentorCard({ mentor, onRequest, requested }) {
+  const isAvailable = mentor.availability ? mentor.availability === 'Available' : mentor.available;
+  const availabilityLabel = isAvailable ? '● Available' : '● Unavailable';
+
   return (
-    <div className={`rounded-xl border border-slate-200 bg-white p-6 shadow-sm transition-all hover:shadow-md ${!mentor.available ? 'opacity-60' : ''}`}>
+    <div className={`rounded-xl border border-slate-200 bg-white p-6 shadow-sm transition-all hover:shadow-md ${!isAvailable ? 'opacity-60' : ''}`}>
       <div className="flex items-start gap-4">
         <img
           src={mentor.avatar}
@@ -33,13 +36,13 @@ export default function MentorCard({ mentor, onRequest, requested }) {
         </div>
       </div>
       <div className="mt-4 flex items-center justify-between border-t border-slate-100 pt-4">
-        <span className={`text-xs font-medium ${mentor.available ? 'text-emerald-600' : 'text-slate-400'}`}>
-          {mentor.available ? '● Available' : '● Unavailable'}
+        <span className={`text-xs font-medium ${isAvailable ? 'text-emerald-600' : 'text-slate-400'}`}>
+          {availabilityLabel}
         </span>
         <button
           onClick={() => onRequest(mentor)}
-          disabled={!mentor.available || requested}
-          className="inline-flex items-center gap-1.5 rounded-lg bg-brand-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-brand-700 disabled:cursor-not-allowed disabled:bg-slate-300"
+          disabled={!isAvailable || requested}
+          className="inline-flex items-center gap-1.5 rounded-lg bg-brand-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-brand-700 disabled:cursor-not-allowed disabled:bg-slate-300 cursor-pointer"
         >
           <FiSend className="h-3.5 w-3.5" />
           {requested ? 'Requested' : 'Send Request'}

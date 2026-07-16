@@ -7,22 +7,22 @@ const colorMap = {
   indigo: { bg: 'bg-indigo-50', icon: 'text-indigo-600', ring: 'ring-indigo-100' },
 };
 
-export default function StatCard({ icon: Icon, label, value, change, color = 'blue' }) {
+export default function StatCard({ icon: Icon, label, value, change, color = 'blue', compact = false }) {
   const colors = colorMap[color] || colorMap.blue;
 
   return (
-    <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm transition-shadow hover:shadow-md">
-      <div className="flex items-start justify-between">
-        <div>
-          <p className="text-sm font-medium text-slate-500">{label}</p>
-          <p className="mt-2 text-3xl font-bold text-slate-900">{value}</p>
+    <div className={`rounded-xl border border-slate-200 bg-white shadow-sm transition-all duration-300 hover:-translate-y-1 hover:shadow-md ${compact ? 'p-3' : 'p-5'}`}>
+      <div className="flex items-start justify-between gap-2">
+        <div className="min-w-0">
+          <p className={`font-medium text-slate-500 ${compact ? 'truncate text-xs' : 'text-sm'}`}>{label}</p>
+          <p className={`font-bold text-slate-900 ${compact ? 'mt-1 text-xl' : 'mt-2 text-3xl'}`}>{value}</p>
           {change && (
             <p className="mt-1 text-xs text-slate-400">{change}</p>
           )}
         </div>
         {Icon && (
-          <div className={`rounded-lg p-2.5 ring-1 ${colors.bg} ${colors.ring}`}>
-            <Icon className={`h-5 w-5 ${colors.icon}`} />
+          <div className={`shrink-0 rounded-lg ring-1 ${colors.bg} ${colors.ring} ${compact ? 'p-2' : 'p-2.5'}`}>
+            <Icon className={`${colors.icon} ${compact ? 'h-4 w-4' : 'h-5 w-5'}`} />
           </div>
         )}
       </div>

@@ -70,10 +70,10 @@ export default function Sidebar({ isOpen, onClose }) {
             to={link.to}
             onClick={onClose}
             className={({ isActive }) =>
-              `flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors ${
+              `flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-all duration-200 ${
                 isActive
                   ? 'bg-brand-50 text-brand-700'
-                  : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900'
+                  : 'text-slate-600 hover:translate-x-1 hover:bg-slate-50 hover:text-slate-900'
               }`
             }
           >

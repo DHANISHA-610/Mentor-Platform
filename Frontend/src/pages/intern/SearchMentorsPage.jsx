@@ -78,7 +78,29 @@ export default function SearchMentorsPage() {
     );
   };
 
-  const handleRequest = async (mentor) => {
+  const [requestModalOpen, setRequestModalOpen] = useState(false);
+  const [requestMessage, setRequestMessage] = useState('');
+  const [selectedMentor, setSelectedMentor] = useState(null);
+
+  const openRequestModal = (mentor) => {
+    setSelectedMentor(mentor);
+    setRequestMessage(`I want to learn about ${mentor.title || 'fullstack development'} and build a strong project portfolio.`);
+    setRequestModalOpen(true);
+  };
+
+  const closeRequestModal = () => {
+    setRequestModalOpen(false);
+    setSelectedMentor(null);
+    setRequestMessage('');
+  };
+
+  const handleRequest = async () => {
+    if (!selectedMentor || !requestMessage.trim()) {
+      setToast('Please enter a request message before sending.');
+      setTimeout(() => setToast(null), 3000);
+      return;
+    }
+
     try {
       const res = await fetch(REQUESTS_API_URL, {
         method: 'POST',
@@ -86,13 +108,17 @@ export default function SearchMentorsPage() {
           'Content-Type': 'application/json',
           Authorization: `Bearer ${token}`,
         },
-        body: JSON.stringify({ mentorId: mentor._id, message: `I'd like to learn more about ${mentor.title || 'mentorship'}.` }),
+        body: JSON.stringify({
+          mentorId: selectedMentor._id,
+          message: requestMessage.trim(),
+        }),
       });
       const data = await res.json();
       if (!res.ok || !data.success) throw new Error(data.message || 'Failed to send request');
-      setRequestedIds((prev) => new Set([...prev, mentor._id]));
-      setToast(`Request sent to ${mentor.name}!`);
+      setRequestedIds((prev) => new Set([...prev, selectedMentor._id]));
+      setToast(`Request sent to ${selectedMentor.name}!`);
       setTimeout(() => setToast(null), 3000);
+      closeRequestModal();
     } catch (err) {
       setToast(err.message || 'Unable to send request');
       setTimeout(() => setToast(null), 3000);
@@ -172,10 +198,55 @@ export default function SearchMentorsPage() {
             <MentorCard
               key={mentor._id}
               mentor={{ ...mentor, id: mentor._id }}
-              onRequest={handleRequest}
+              onRequest={() => openRequestModal(mentor)}
               requested={requestedIds.has(mentor._id)}
             />
           ))}
+        </div>
+      )}
+
+      {requestModalOpen && selectedMentor && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4 py-6">
+          <div className="w-full max-w-2xl rounded-3xl bg-white p-6 shadow-xl">
+            <div className="mb-4 flex items-start justify-between gap-4">
+              <div>
+                <h2 className="text-xl font-semibold text-slate-900">Send request to {selectedMentor.name}</h2>
+                <p className="mt-1 text-sm text-slate-500">Type your message and explain what you want to learn.</p>
+              </div>
+              <button
+                type="button"
+                onClick={closeRequestModal}
+                className="rounded-full bg-slate-100 px-3 py-2 text-slate-600 hover:bg-slate-200"
+              >
+                ✕
+              </button>
+            </div>
+
+            <textarea
+              value={requestMessage}
+              onChange={(e) => setRequestMessage(e.target.value)}
+              rows={6}
+              className="w-full rounded-3xl border border-slate-300 bg-slate-50 p-4 text-sm text-slate-900 focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/20"
+              placeholder="Type your mentorship request message here..."
+            />
+
+            <div className="mt-4 flex justify-end gap-3">
+              <button
+                type="button"
+                onClick={closeRequestModal}
+                className="rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={handleRequest}
+                className="rounded-xl bg-brand-600 px-4 py-2 text-sm font-medium text-white hover:bg-brand-700"
+              >
+                Send Request
+              </button>
+            </div>
+          </div>
         </div>
       )}
     </DashboardLayout>

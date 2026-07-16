@@ -394,9 +394,60 @@ const editMessage = async (req, res, next) => {
   }
 };
 
+const getOrCreateConversationWithUser = async (req, res, next) => {
+  try {
+    const { userId } = req.params;
+    const currentUser = req.user;
+
+    const otherUser = await User.findById(userId);
+    if (!otherUser) {
+      res.status(404);
+      throw new Error('User not found');
+    }
+
+    let canChat = false;
+
+    if (currentUser.role === 'mentor' && otherUser.role === 'intern') {
+      const hasApprovedRequest = await Request.exists({
+        mentor: currentUser._id,
+        requester: otherUser._id,
+        status: 'approved',
+      });
+      const hasTask = await Task.exists({
+        mentor: currentUser._id,
+        assignee: otherUser._id,
+      });
+      canChat = Boolean(hasApprovedRequest || hasTask);
+    } else if (currentUser.role === 'intern' && otherUser.role === 'mentor') {
+      const hasApprovedRequest = await Request.exists({
+        requester: currentUser._id,
+        mentor: otherUser._id,
+        status: 'approved',
+      });
+      canChat = Boolean(hasApprovedRequest);
+    }
+
+    if (!canChat) {
+      res.status(403);
+      throw new Error('You are not allowed to chat with this user');
+    }
+
+    const conversation = await createConversationIfMissing([currentUser._id, otherUser._id]);
+    await conversation.populate('participants', 'name profileImage title specialization role');
+
+    res.json({
+      success: true,
+      conversation: buildConversationResponse(conversation, currentUser),
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
 module.exports = {
   getConversations,
   getConversationById,
+  getOrCreateConversationWithUser,
   sendMessage,
   editMessage,
 };

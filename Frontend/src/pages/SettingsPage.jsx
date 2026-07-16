@@ -306,8 +306,7 @@ export default function SettingsPage() {
                     <label className="block text-sm font-medium text-slate-700">Availability</label>
                     <select value={profile.availability} onChange={(e) => setProfile({ ...profile, availability: e.target.value })} className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm">
                       <option value="Available">Available</option>
-                      <option value="Busy">Busy</option>
-                      <option value="Limited">Limited</option>
+                      <option value="Unavailable">Unavailable</option>
                     </select>
                   </div>
                   <div>
@@ -338,7 +337,7 @@ export default function SettingsPage() {
             <button
               type="submit"
               disabled={savingProfile}
-              className="rounded-lg bg-brand-600 px-4 py-2 text-sm font-medium text-white transition hover:bg-brand-700 disabled:opacity-60"
+              className="rounded-lg bg-brand-600 px-4 py-2 text-sm font-medium text-white transition-all duration-300 hover:-translate-y-0.5 hover:shadow-md hover:bg-brand-700 disabled:opacity-60 disabled:hover:translate-y-0"
             >
               {savingProfile ? 'Saving...' : 'Save Profile'}
             </button>
@@ -388,7 +387,7 @@ export default function SettingsPage() {
             <button
               type="submit"
               disabled={savingPassword}
-              className="rounded-lg bg-brand-600 px-4 py-2 text-sm font-medium text-white transition hover:bg-brand-700 disabled:opacity-60"
+              className="rounded-lg bg-brand-600 px-4 py-2 text-sm font-medium text-white transition-all duration-300 hover:-translate-y-0.5 hover:shadow-md hover:bg-brand-700 disabled:opacity-60 disabled:hover:translate-y-0"
             >
               {savingPassword ? 'Updating...' : 'Update Password'}
             </button>

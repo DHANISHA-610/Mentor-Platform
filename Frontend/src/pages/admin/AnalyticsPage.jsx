@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { FiTrendingUp, FiUsers, FiLink, FiClipboard, FiMessageSquare, FiCheckCircle } from 'react-icons/fi';
+import { FiUsers, FiLink, FiClipboard, FiMessageSquare, FiCheckCircle } from 'react-icons/fi';
 import DashboardLayout from '../../layouts/DashboardLayout';
 import PageHeader from '../../components/ui/PageHeader';
 import StatCard from '../../components/ui/StatCard';
@@ -7,6 +7,8 @@ import LoadingSpinner from '../../components/ui/LoadingSpinner';
 import ErrorState from '../../components/ui/ErrorState';
 import EmptyState from '../../components/ui/EmptyState';
 import { useAuth } from '../../hooks/useAuth';
+import { ActivityLineChart, MonthlyGrowthChart, PathwayBarChart, TaskStatusPie } from '../../components/admin/AnalyticsCharts';
+import { AnalyticsStatCard, DataCard } from '../../components/admin/AnalyticsCards';
 
 const API_URL = 'http://localhost:5000/api/dashboard';
 
@@ -53,16 +55,25 @@ export default function AnalyticsPage() {
 
   const analytics = dashboard?.analytics?.[range] || {
     signups: 0,
+    signupsTrend: 0,
     pairings: 0,
+    pairingsTrend: 0,
     tasks: 0,
+    tasksTrend: 0,
     messages: 0,
+    messagesTrend: 0,
     completionRate: 0,
-    weeklyActivity: [],
-    pathways: [],
+    completionRateTrend: 0,
   };
-
+  const timeline = dashboard?.timeline?.[range] || [];
+  const pathways = dashboard?.pathways || [];
+  const monthlyGrowth = dashboard?.monthlyGrowth || [];
+  const taskStatusDistribution = dashboard?.taskStatusDistribution || [];
+  const topMentors = dashboard?.topMentors || [];
+  const topInterns = dashboard?.topInterns || [];
+  const recentActivities = dashboard?.recentActivities || [];
+  const careerInsights = dashboard?.careerInsights || {};
   const metrics = dashboard?.metrics;
-  const maxActivity = Math.max(...(analytics.weeklyActivity.map((d) => d.value) || [0]));
 
   return (
     <DashboardLayout>
@@ -102,63 +113,180 @@ export default function AnalyticsPage() {
         </div>
       ) : (
         <>
-          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
-            <StatCard icon={FiUsers} label="Signups" value={analytics.signups} color="blue" change="New users" />
-            <StatCard icon={FiLink} label="Pairings" value={analytics.pairings} color="green" change="New pairings" />
-            <StatCard icon={FiClipboard} label="Tasks" value={analytics.tasks} color="indigo" change="Tasks created" />
-            <StatCard icon={FiMessageSquare} label="Messages" value={analytics.messages} color="purple" change="Messages sent" />
-            <StatCard icon={FiCheckCircle} label="Completion Rate" value={`${analytics.completionRate}%`} color="yellow" change="Task completion" />
+          <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-5">
+            <AnalyticsStatCard
+              icon={FiUsers}
+              label="Signups"
+              value={analytics.signups}
+              description="New users"
+              trend={analytics.signupsTrend}
+            />
+            <AnalyticsStatCard
+              icon={FiLink}
+              label="Pairings"
+              value={analytics.pairings}
+              description="Approved mentor pairings"
+              trend={analytics.pairingsTrend}
+            />
+            <AnalyticsStatCard
+              icon={FiClipboard}
+              label="Tasks"
+              value={analytics.tasks}
+              description="Tasks created"
+              trend={analytics.tasksTrend}
+            />
+            <AnalyticsStatCard
+              icon={FiMessageSquare}
+              label="Messages"
+              value={analytics.messages}
+              description="Chat activity"
+              trend={analytics.messagesTrend}
+            />
+            <AnalyticsStatCard
+              icon={FiCheckCircle}
+              label="Completion Rate"
+              value={`${analytics.completionRate}%`}
+              description="Tasks completed"
+              trend={analytics.completionRateTrend}
+            />
           </div>
 
           {metrics && (
-            <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-              <StatCard label="Total Users" value={metrics.totalUsers} color="blue" />
-              <StatCard label="Active Pairings" value={metrics.activePairings} color="green" />
-              <StatCard label="Pending Approvals" value={metrics.pendingApprovals} color="yellow" />
-              <StatCard label="Tasks This Month" value={metrics.tasksThisMonth} color="purple" />
+            <div className="mt-6 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+              <StatCard label="Total Users" value={metrics.totalUsers} color="blue" compact />
+              <StatCard label="Active Pairings" value={metrics.activePairings} color="green" compact />
+              <StatCard label="Pending Approvals" value={metrics.pendingApprovals} color="yellow" compact />
+              <StatCard label="Tasks This Month" value={metrics.tasksThisMonth} color="purple" compact />
             </div>
           )}
 
-          <div className="mt-8 grid gap-6 lg:grid-cols-2">
-            <section className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
-              <div className="mb-6 flex items-center gap-2">
-                <FiTrendingUp className="h-5 w-5 text-brand-600" />
-                <h2 className="text-lg font-semibold text-slate-900">Activity Overview</h2>
-              </div>
-              <div className="flex items-end gap-2" style={{ height: '200px' }}>
-                {analytics.weeklyActivity.map((item) => (
-                  <div key={item.day} className="flex flex-1 flex-col items-center gap-2">
-                    <div className="relative w-full flex-1">
-                      <div
-                        className="absolute bottom-0 w-full rounded-t-md bg-brand-500 transition-all duration-500"
-                        style={{ height: `${maxActivity ? (item.value / maxActivity) * 100 : 0}%` }}
-                      />
-                    </div>
-                    <span className="text-xs text-slate-500">{item.day}</span>
-                  </div>
-                ))}
-              </div>
-            </section>
+          <div className="mt-8 grid gap-6 xl:grid-cols-3">
+            <DataCard title="Activity Timeline" subtitle="Trends for the selected period">
+              <ActivityLineChart data={timeline} />
+            </DataCard>
 
-            <section className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
-              <h2 className="mb-6 text-lg font-semibold text-slate-900">Career Pathway Popularity</h2>
+            <DataCard title="Task Status Distribution" subtitle="Current task progress mix">
+              {taskStatusDistribution.length > 0 ? (
+                <TaskStatusPie data={taskStatusDistribution} />
+              ) : (
+                <p className="text-sm text-slate-500">No task status data available yet.</p>
+              )}
+            </DataCard>
+
+            <DataCard title="Top Pathways" subtitle="Most active intern pathways">
+              {pathways.length > 0 ? (
+                <PathwayBarChart data={pathways} />
+              ) : (
+                <p className="text-sm text-slate-500">No pathway data available yet.</p>
+              )}
+            </DataCard>
+          </div>
+
+          <div className="mt-8 grid gap-6 xl:grid-cols-2">
+            <DataCard title="Monthly Growth" subtitle="New users, mentors, and interns">
+              {monthlyGrowth.length > 0 ? (
+                <MonthlyGrowthChart data={monthlyGrowth} />
+              ) : (
+                <p className="text-sm text-slate-500">No monthly growth data available yet.</p>
+              )}
+            </DataCard>
+
+            <div className="grid gap-6">
+              <DataCard title="Top Mentors" subtitle="Most productive mentor leaders">
+                <div className="space-y-4">
+                  {topMentors.length > 0 ? (
+                    topMentors.map((mentor) => (
+                      <div key={mentor.name} className="rounded-3xl border border-slate-200 bg-slate-50 p-4">
+                        <div className="flex items-center justify-between gap-3">
+                          <div>
+                            <p className="font-semibold text-slate-900">{mentor.name}</p>
+                            <p className="text-sm text-slate-500">{mentor.completedTasks} completed tasks</p>
+                          </div>
+                          <span className="rounded-full bg-emerald-100 px-3 py-1 text-xs font-semibold text-emerald-700">{mentor.successRate}%</span>
+                        </div>
+                        <div className="mt-3 text-sm text-slate-500">Assigned interns: {mentor.assignedInterns}</div>
+                      </div>
+                    ))
+                  ) : (
+                    <p className="text-sm text-slate-500">No mentor data available yet.</p>
+                  )}
+                </div>
+              </DataCard>
+
+              <DataCard title="Top Interns" subtitle="Highest task completion rates">
+                <div className="space-y-4">
+                  {topInterns.length > 0 ? (
+                    topInterns.map((intern) => (
+                      <div key={intern.name} className="rounded-3xl border border-slate-200 bg-slate-50 p-4">
+                        <div className="flex items-center justify-between gap-3">
+                          <div>
+                            <p className="font-semibold text-slate-900">{intern.name}</p>
+                            <p className="text-sm text-slate-500">Active tasks: {intern.activeTasks}</p>
+                          </div>
+                          <span className="rounded-full bg-sky-100 px-3 py-1 text-xs font-semibold text-sky-700">{intern.successRate}%</span>
+                        </div>
+                        <div className="mt-3 text-sm text-slate-500">Completed tasks: {intern.completedTasks}</div>
+                      </div>
+                    ))
+                  ) : (
+                    <p className="text-sm text-slate-500">No intern data available yet.</p>
+                  )}
+                </div>
+              </DataCard>
+            </div>
+          </div>
+
+          <div className="mt-8 grid gap-6 xl:grid-cols-3">
+            <DataCard title="Recent Activity" subtitle="Latest platform events">
               <div className="space-y-4">
-                {analytics.pathways.map((pathway) => (
-                  <div key={pathway.name}>
-                    <div className="mb-1 flex items-center justify-between text-sm">
-                      <span className="font-medium text-slate-700">{pathway.name}</span>
-                      <span className="text-slate-500">{pathway.count} ({pathway.percentage}%)</span>
+                {recentActivities.length > 0 ? (
+                  recentActivities.map((activity, index) => (
+                    <div key={`${activity.label}-${index}`} className="rounded-3xl border border-slate-200 bg-slate-50 p-4">
+                      <div className="flex items-center justify-between gap-3">
+                        <p className="text-sm font-medium text-slate-800">{activity.label}</p>
+                        <span className="text-xs text-slate-500">{new Date(activity.date).toLocaleDateString()}</span>
+                      </div>
                     </div>
-                    <div className="h-2 overflow-hidden rounded-full bg-slate-100">
-                      <div
-                        className="h-full rounded-full bg-brand-500 transition-all duration-500"
-                        style={{ width: `${pathway.percentage}%` }}
-                      />
-                    </div>
-                  </div>
-                ))}
+                  ))
+                ) : (
+                  <p className="text-sm text-slate-500">No recent activity available yet.</p>
+                )}
               </div>
-            </section>
+            </DataCard>
+
+            <DataCard title="Career Insights" subtitle="What interns are learning most">
+              <div className="space-y-4">
+                <div className="rounded-3xl border border-slate-200 bg-slate-50 p-4">
+                  <p className="text-sm font-medium text-slate-700">Most popular skill</p>
+                  <p className="mt-2 text-lg font-semibold text-slate-900">{careerInsights.mostPopularSkill || 'N/A'}</p>
+                </div>
+                <div className="rounded-3xl border border-slate-200 bg-slate-50 p-4">
+                  <p className="text-sm font-medium text-slate-700">Fastest growing pathway</p>
+                  <p className="mt-2 text-lg font-semibold text-slate-900">{careerInsights.fastestGrowingPathway || 'N/A'}</p>
+                </div>
+                <div className="rounded-3xl border border-slate-200 bg-slate-50 p-4">
+                  <p className="text-sm font-medium text-slate-700">Average interns per pathway</p>
+                  <p className="mt-2 text-lg font-semibold text-slate-900">{careerInsights.averageInternsPerPathway ?? 'N/A'}</p>
+                </div>
+              </div>
+            </DataCard>
+
+            <DataCard title="Performance Snapshot" subtitle="Role and approval overview">
+              <div className="grid gap-3">
+                <div className="rounded-3xl border border-slate-200 bg-slate-50 p-4">
+                  <p className="text-sm text-slate-500">Admin users</p>
+                  <p className="mt-2 text-xl font-semibold text-slate-900">{metrics?.roleCounts?.admin || 0}</p>
+                </div>
+                <div className="rounded-3xl border border-slate-200 bg-slate-50 p-4">
+                  <p className="text-sm text-slate-500">Mentor users</p>
+                  <p className="mt-2 text-xl font-semibold text-slate-900">{metrics?.roleCounts?.mentor || 0}</p>
+                </div>
+                <div className="rounded-3xl border border-slate-200 bg-slate-50 p-4">
+                  <p className="text-sm text-slate-500">Intern users</p>
+                  <p className="mt-2 text-xl font-semibold text-slate-900">{metrics?.roleCounts?.intern || 0}</p>
+                </div>
+              </div>
+            </DataCard>
           </div>
         </>
       )}

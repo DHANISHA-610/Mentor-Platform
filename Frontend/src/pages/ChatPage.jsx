@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { io } from 'socket.io-client';
 import { FiSearch, FiSend, FiArrowLeft } from 'react-icons/fi';
 import DashboardLayout from '../layouts/DashboardLayout';
@@ -13,6 +14,8 @@ const SOCKET_URL = 'http://localhost:5000';
 
 export default function ChatPage() {
   const { token } = useAuth();
+  const [searchParams] = useSearchParams();
+  const targetUserId = searchParams.get('userId');
   const [conversations, setConversations] = useState([]);
   const [activeId, setActiveId] = useState(null);
   const activeIdRef = useRef(null);
@@ -40,8 +43,38 @@ export default function ChatPage() {
           throw new Error(data.message || 'Failed to load conversations');
         }
 
-        setConversations(data.conversations || []);
-        setActiveId(data.conversations?.[0]?.id || null);
+        let loadedConversations = data.conversations || [];
+        let nextActiveId = loadedConversations[0]?.id || null;
+
+        if (targetUserId) {
+          const existingConversation = loadedConversations.find(
+            (conversation) => conversation.partnerId === targetUserId
+          );
+
+          if (existingConversation) {
+            nextActiveId = existingConversation.id;
+          } else {
+            const openRes = await fetch(`${API_URL}/with/${targetUserId}`, {
+              headers: { Authorization: `Bearer ${token}` },
+            });
+            const openData = await openRes.json();
+
+            if (!openRes.ok || !openData.success) {
+              throw new Error(openData.message || 'Failed to open conversation');
+            }
+
+            loadedConversations = [
+              openData.conversation,
+              ...loadedConversations.filter((conversation) => conversation.id !== openData.conversation.id),
+            ];
+            nextActiveId = openData.conversation.id;
+          }
+
+          setShowMobileChat(true);
+        }
+
+        setConversations(loadedConversations);
+        setActiveId(nextActiveId);
       } catch (err) {
         setError(err.message || 'Unable to load conversations');
       } finally {
@@ -52,7 +85,7 @@ export default function ChatPage() {
     if (token) {
       fetchConversations();
     }
-  }, [token]);
+  }, [token, targetUserId]);
 
   useEffect(() => {
     if (!token) return;
@@ -63,9 +96,20 @@ export default function ChatPage() {
     });
 
     socketRef.current = socket;
+    setSocketError('');
+
+    socket.on('connect', () => {
+      setSocketError('');
+    });
 
     socket.on('connect_error', (err) => {
       setSocketError(err.message || 'Socket connection failed');
+    });
+
+    socket.on('disconnect', (reason) => {
+      if (reason !== 'io client disconnect') {
+        setSocketError('Socket disconnected. Reconnecting...');
+      }
     });
 
     socket.on('receive_message', ({ conversationId, message, lastMessage, lastMessageTime }) => {

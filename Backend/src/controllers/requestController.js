@@ -43,7 +43,10 @@ const getRequestsForUser = async (req, res, next) => {
       ? { mentor: req.user._id }
       : { requester: req.user._id };
 
-    const requests = await Request.find(query).sort({ createdAt: -1 });
+    const requests = await Request.find(query)
+      .sort({ createdAt: -1 })
+      .populate('mentor', 'name title profileImage');
+
     res.json({ success: true, requests });
   } catch (error) {
     next(error);

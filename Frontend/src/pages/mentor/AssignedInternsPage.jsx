@@ -1,5 +1,5 @@
-import { useEffect, useMemo, useState } from 'react';
-import { FiSearch, FiUsers } from 'react-icons/fi';
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import { FiSearch, FiUsers, FiInbox, FiUserCheck, FiTrendingUp, FiCheckSquare } from 'react-icons/fi';
 import DashboardLayout from '../../layouts/DashboardLayout';
 import PageHeader from '../../components/ui/PageHeader';
 import StatCard from '../../components/ui/StatCard';
@@ -9,7 +9,7 @@ import LoadingSpinner from '../../components/ui/LoadingSpinner';
 import ErrorState from '../../components/ui/ErrorState';
 import { useAuth } from '../../hooks/useAuth';
 
-const API_URL = 'http://localhost:5000/api/dashboard';
+const API_URL = 'http://localhost:5000/api/tasks';
 
 export default function AssignedInternsPage() {
   const { token } = useAuth();
@@ -17,34 +17,58 @@ export default function AssignedInternsPage() {
   const [interns, setInterns] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [toast, setToast] = useState('');
+
+  const fetchAssignedInterns = useCallback(async () => {
+    try {
+      setLoading(true);
+      setError('');
+
+      const res = await fetch(`${API_URL}/intern-submissions`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const result = await res.json();
+
+      if (!res.ok || !result.success) {
+        throw new Error(result.message || 'Failed to load assigned interns');
+      }
+
+      setInterns(result.interns || []);
+    } catch (err) {
+      setError(err.message || 'Unable to load assigned interns');
+    } finally {
+      setLoading(false);
+    }
+  }, [token]);
 
   useEffect(() => {
-    const fetchAssignedInterns = async () => {
-      try {
-        setLoading(true);
-        setError('');
-
-        const res = await fetch(API_URL, {
-          headers: { Authorization: `Bearer ${token}` },
-        });
-        const result = await res.json();
-
-        if (!res.ok || !result.success) {
-          throw new Error(result.message || 'Failed to load assigned interns');
-        }
-
-        setInterns(result.dashboard.assignedInterns || []);
-      } catch (err) {
-        setError(err.message || 'Unable to load assigned interns');
-      } finally {
-        setLoading(false);
-      }
-    };
-
     if (token) {
       fetchAssignedInterns();
     }
-  }, [token]);
+  }, [token, fetchAssignedInterns]);
+
+  const handleReview = async (taskId, payload) => {
+    const res = await fetch(`${API_URL}/${taskId}`, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify(payload),
+    });
+    const data = await res.json();
+    if (!res.ok || !data.success) {
+      throw new Error(data.message || 'Failed to update submission');
+    }
+
+    setToast(
+      payload.feedback?.status === 'approved'
+        ? 'Submission approved successfully'
+        : 'Change request sent to intern'
+    );
+    setTimeout(() => setToast(null), 3000);
+    await fetchAssignedInterns();
+  };
 
   const filtered = useMemo(() => {
     const q = search.toLowerCase();
@@ -58,14 +82,21 @@ export default function AssignedInternsPage() {
   }, [interns, search]);
 
   const activeInterns = interns.filter((i) => i.status === 'active').length;
-  const avgProgress = interns.length === 0 ? 0 : Math.round(
-    interns.reduce((sum, i) => sum + i.progress, 0) / interns.length
-  );
+  const avgProgress = interns.length === 0
+    ? 0
+    : Math.round(interns.reduce((sum, i) => sum + i.progress, 0) / interns.length);
   const totalTasksDone = interns.reduce((sum, i) => sum + i.tasksCompleted, 0);
+  const pendingReviews = interns.reduce((sum, i) => sum + (i.pendingReviewCount || 0), 0);
 
   return (
     <DashboardLayout>
-      <PageHeader title="Assigned Interns" subtitle="Manage your mentee roster" />
+      <PageHeader title="Assigned Interns" subtitle="Review submissions and manage your mentee roster" />
+
+      {toast && (
+        <div className="mb-4 rounded-lg bg-emerald-50 px-4 py-3 text-sm text-emerald-700">
+          {toast}
+        </div>
+      )}
 
       {loading ? (
         <div className="flex min-h-[320px] items-center justify-center">
@@ -73,15 +104,16 @@ export default function AssignedInternsPage() {
         </div>
       ) : error ? (
         <div className="py-12">
-          <ErrorState message={error} />
+          <ErrorState message={error} onRetry={fetchAssignedInterns} />
         </div>
       ) : (
         <>
-          <div className="mb-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          <div className="mb-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
             <StatCard icon={FiUsers} label="Total Interns" value={interns.length} color="blue" />
-            <StatCard label="Active Interns" value={activeInterns} color="green" />
-            <StatCard label="Avg Progress" value={`${avgProgress}%`} color="indigo" />
-            <StatCard label="Tasks Done" value={totalTasksDone} color="purple" />
+            <StatCard icon={FiUserCheck} label="Active Interns" value={activeInterns} color="green" />
+            <StatCard icon={FiInbox} label="Pending Reviews" value={pendingReviews} color="yellow" />
+            <StatCard icon={FiTrendingUp} label="Avg Progress" value={`${avgProgress}%`} color="indigo" />
+            <StatCard icon={FiCheckSquare} label="Tasks Done" value={totalTasksDone} color="purple" />
           </div>
 
           <div className="relative mb-6">
@@ -99,12 +131,12 @@ export default function AssignedInternsPage() {
             <EmptyState
               icon={FiUsers}
               title="No interns found"
-              description="Try adjusting your search to find assigned interns."
+              description="Try adjusting your search or assign tasks to interns first."
             />
           ) : (
-            <div className="grid gap-4 md:grid-cols-2">
+            <div className="grid gap-4 lg:grid-cols-2">
               {filtered.map((intern) => (
-                <InternCard key={intern.id} intern={intern} />
+                <InternCard key={intern.id} intern={intern} onReview={handleReview} />
               ))}
             </div>
           )}

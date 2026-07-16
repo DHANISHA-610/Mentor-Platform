@@ -1,8 +1,9 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { FiSend, FiPlus } from 'react-icons/fi';
+import { FiSend, FiPlus, FiClock, FiCheckCircle, FiXCircle } from 'react-icons/fi';
 import DashboardLayout from '../../layouts/DashboardLayout';
 import PageHeader from '../../components/ui/PageHeader';
+import StatCard from '../../components/ui/StatCard';
 import RequestCard from '../../components/intern/RequestCard';
 import EmptyState from '../../components/ui/EmptyState';
 import LoadingSpinner from '../../components/ui/LoadingSpinner';
@@ -73,6 +74,13 @@ export default function MyRequestsPage() {
           </button>
         }
       />
+
+      <div className="mb-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <StatCard icon={FiSend} label="Total Requests" value={counts.all} color="blue" />
+        <StatCard icon={FiClock} label="Pending" value={counts.pending} color="yellow" />
+        <StatCard icon={FiCheckCircle} label="Approved" value={counts.approved} color="green" />
+        <StatCard icon={FiXCircle} label="Rejected" value={counts.rejected} color="red" />
+      </div>
 
       <div className="mb-6 flex gap-2 overflow-x-auto border-b border-slate-200 pb-px">
         {tabs.map((tab) => (

@@ -5,6 +5,7 @@ export default function CreateTaskModal({ isOpen, onClose, onSubmit, interns }) 
   const [form, setForm] = useState({
     title: '',
     description: '',
+    expectedDeliverables: '',
     assigneeId: '',
     dueDate: '',
     priority: 'medium',
@@ -17,6 +18,7 @@ export default function CreateTaskModal({ isOpen, onClose, onSubmit, interns }) 
     const newErrors = {};
     if (!form.title.trim()) newErrors.title = 'Title is required';
     if (!form.description.trim()) newErrors.description = 'Description is required';
+    if (!form.expectedDeliverables.trim()) newErrors.expectedDeliverables = 'Expected deliverables are required';
     if (!form.assigneeId) newErrors.assigneeId = 'Assignee is required';
     if (!form.dueDate) newErrors.dueDate = 'Due date is required';
     setErrors(newErrors);
@@ -35,7 +37,7 @@ export default function CreateTaskModal({ isOpen, onClose, onSubmit, interns }) 
       status: 'pending',
     });
 
-    setForm({ title: '', description: '', assigneeId: '', dueDate: '', priority: 'medium' });
+    setForm({ title: '', description: '', expectedDeliverables: '', assigneeId: '', dueDate: '', priority: 'medium' });
     setErrors({});
     onClose();
   };
@@ -74,6 +76,18 @@ export default function CreateTaskModal({ isOpen, onClose, onSubmit, interns }) 
               placeholder="Describe the task..."
             />
             {errors.description && <p className="mt-1 text-xs text-red-500">{errors.description}</p>}
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-slate-700">Expected Deliverables</label>
+            <textarea
+              value={form.expectedDeliverables}
+              onChange={(e) => setForm({ ...form, expectedDeliverables: e.target.value })}
+              rows={2}
+              className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/20"
+              placeholder="Describe the expected deliverables..."
+            />
+            {errors.expectedDeliverables && <p className="mt-1 text-xs text-red-500">{errors.expectedDeliverables}</p>}
           </div>
 
           <div className="grid grid-cols-2 gap-4">

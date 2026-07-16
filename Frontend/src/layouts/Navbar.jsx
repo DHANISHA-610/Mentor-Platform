@@ -30,7 +30,7 @@ export default function Navbar({ onMenuClick }) {
         <div className="flex items-center gap-3">
           <button
             onClick={onMenuClick}
-            className="rounded-lg p-2 text-slate-500 hover:bg-slate-100 lg:hidden"
+            className="rounded-lg p-2 text-slate-500 transition-all hover:scale-105 hover:bg-slate-100 lg:hidden"
           >
             <FiMenu className="h-5 w-5" />
           </button>
@@ -45,7 +45,7 @@ export default function Navbar({ onMenuClick }) {
         </div>
 
         <div className="flex items-center gap-2">
-          <button className="relative rounded-lg p-2 text-slate-500 hover:bg-slate-100">
+          <button className="relative rounded-lg p-2 text-slate-500 transition-all hover:scale-105 hover:bg-slate-100">
             <FiBell className="h-5 w-5" />
             <span className="absolute right-1.5 top-1.5 h-2 w-2 rounded-full bg-red-500" />
           </button>
@@ -53,7 +53,7 @@ export default function Navbar({ onMenuClick }) {
           <div className="relative" ref={menuRef}>
             <button
               onClick={() => setMenuOpen(!menuOpen)}
-              className="flex items-center gap-2 rounded-lg px-2 py-1.5 hover:bg-slate-100"
+              className="flex items-center gap-2 rounded-lg px-2 py-1.5 transition-all hover:scale-[1.02] hover:bg-slate-100"
             >
               <div className="flex h-8 w-8 items-center justify-center rounded-full bg-brand-100 text-sm font-medium text-brand-700">
                 {user?.name?.charAt(0)?.toUpperCase() || 'U'}

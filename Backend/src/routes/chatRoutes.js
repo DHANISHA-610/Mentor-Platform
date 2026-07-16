@@ -3,6 +3,7 @@ const { protect } = require('../middleware/authMiddleware');
 const {
   getConversations,
   getConversationById,
+  getOrCreateConversationWithUser,
   sendMessage,
   editMessage,
 } = require('../controllers/chatController');
@@ -10,6 +11,7 @@ const {
 const router = express.Router();
 
 router.get('/', protect, getConversations);
+router.get('/with/:userId', protect, getOrCreateConversationWithUser);
 router.get('/:id', protect, getConversationById);
 router.post('/:id/messages', protect, sendMessage);
 router.put('/:id/messages/:messageId', protect, editMessage);

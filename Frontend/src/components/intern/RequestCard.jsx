@@ -1,9 +1,9 @@
 import StatusBadge from '../ui/StatusBadge';
 
 export default function RequestCard({ request }) {
-  const mentorName = request.mentorName || request.mentor?.name || 'Mentor';
-  const mentorTitle = request.mentorTitle || request.mentor?.title || 'Mentor';
-  const mentorAvatar = request.mentorAvatar || request.mentor?.profileImage || 'https://api.dicebear.com/7.x/avataaars/svg?seed=mentor';
+  const mentorName = request.mentor?.name || request.mentorName || 'Mentor';
+  const mentorTitle = request.mentor?.title || request.mentorTitle || 'Mentor';
+  const mentorAvatar = request.mentor?.profileImage || request.mentorAvatar || 'https://api.dicebear.com/7.x/avataaars/svg?seed=mentor';
   const sentDate = request.sentDate ? new Date(request.sentDate).toLocaleDateString() : 'Recently sent';
   const responseDate = request.responseDate ? new Date(request.responseDate).toLocaleDateString() : null;
 

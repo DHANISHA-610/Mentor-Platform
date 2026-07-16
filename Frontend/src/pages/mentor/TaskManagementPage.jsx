@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
-import { FiPlus, FiCheck, FiClipboard } from 'react-icons/fi';
+import { useNavigate } from 'react-router-dom';
+import { FiPlus, FiCheck, FiClipboard, FiClock, FiPlayCircle, FiEye, FiCheckCircle, FiAlertCircle } from 'react-icons/fi';
 import DashboardLayout from '../../layouts/DashboardLayout';
 import PageHeader from '../../components/ui/PageHeader';
 import StatCard from '../../components/ui/StatCard';
@@ -16,6 +17,7 @@ const tabs = [
   { key: 'all', label: 'All' },
   { key: 'pending', label: 'Pending' },
   { key: 'in_progress', label: 'In Progress' },
+  { key: 'under_review', label: 'Under Review' },
   { key: 'completed', label: 'Completed' },
   { key: 'overdue', label: 'Overdue' },
 ];
@@ -82,6 +84,7 @@ export default function TaskManagementPage() {
     total: tasks.length,
     pending: tasks.filter((t) => t.status === 'pending').length,
     inProgress: tasks.filter((t) => t.status === 'in_progress').length,
+    underReview: tasks.filter((t) => t.status === 'under_review').length,
     completed: tasks.filter((t) => t.status === 'completed').length,
     overdue: tasks.filter((t) => t.status === 'overdue').length,
   };
@@ -125,6 +128,9 @@ export default function TaskManagementPage() {
     }
   };
 
+  const navigate = useNavigate();
+  const openTask = (taskId) => navigate(`/tasks/${taskId}`);
+
   const handleEdit = () => {
     showToast('Task editing coming soon');
   };
@@ -152,12 +158,13 @@ export default function TaskManagementPage() {
         </div>
       )}
 
-      <div className="mb-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
+      <div className="mb-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-6">
         <StatCard icon={FiClipboard} label="Total" value={stats.total} color="blue" />
-        <StatCard label="Pending" value={stats.pending} color="yellow" />
-        <StatCard label="In Progress" value={stats.inProgress} color="indigo" />
-        <StatCard label="Completed" value={stats.completed} color="green" />
-        <StatCard label="Overdue" value={stats.overdue} color="red" />
+        <StatCard icon={FiClock} label="Pending" value={stats.pending} color="yellow" />
+        <StatCard icon={FiPlayCircle} label="In Progress" value={stats.inProgress} color="indigo" />
+        <StatCard icon={FiEye} label="Under Review" value={stats.underReview} color="purple" />
+        <StatCard icon={FiCheckCircle} label="Completed" value={stats.completed} color="green" />
+        <StatCard icon={FiAlertCircle} label="Overdue" value={stats.overdue} color="red" />
       </div>
 
       <div className="mb-6 flex gap-2 overflow-x-auto border-b border-slate-200 pb-px">
